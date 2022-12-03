@@ -1,7 +1,6 @@
-from functools import reduce
 from itertools import islice
 
-PRIORITIY = {c: i for i, c in enumerate('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', 1)}
+PRIORITY = {c: i for i, c in enumerate('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', 1)}
 
 
 def read_data():
@@ -16,18 +15,22 @@ def batch_data():
         yield batch
 
 
+def common_item(x, y):
+    return next(filter(set(x).__contains__, y))
+
+
 def common_item_1(item):
     mid = len(item) // 2
-    return next(filter(set(item[:mid]).__contains__, item[mid:]))
+    return common_item(item[:mid], item[mid:])
 
 
 def common_item_2(items):
-    intersection = reduce(set.intersection, items[1:], set(items[0]))
-    return intersection.pop()
+    intersect_pair = set(items[0]).intersection(items[1])
+    return common_item(intersect_pair, items[2])
 
 
 def priority_sum(common_item_fn, data):
-    return sum(map(PRIORITIY.__getitem__, map(common_item_fn, data)))
+    return sum(map(PRIORITY.__getitem__, map(common_item_fn, data)))
 
 
 def main():
