@@ -19,14 +19,14 @@ def common_item(x, y):
     return next(filter(set(x).__contains__, y))
 
 
-def common_item_1(item):
-    mid = len(item) // 2
-    return common_item(item[:mid], item[mid:])
+def common_item_1(x):
+    mid = len(x) // 2
+    return common_item(x[:mid], x[mid:])
 
 
-def common_item_2(items):
-    intersect_pair = set(items[0]).intersection(items[1])
-    return common_item(intersect_pair, items[2])
+def common_item_2(xs):
+    intersect_pair = set(xs[0]).intersection(xs[1])
+    return common_item(intersect_pair, xs[2])
 
 
 def priority_sum(common_item_fn, data):
