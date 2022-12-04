@@ -9,8 +9,7 @@ def read_data():
             yield line.rstrip('\n')
 
 
-def batch_data():
-    it = read_data()
+def batch_data(it):
     while batch := tuple(islice(it, 3)):
         yield batch
 
@@ -29,13 +28,13 @@ def common_item_2(xs):
     return common_item(intersect_pair, xs[2])
 
 
-def priority_sum(common_item_fn, data):
-    return sum(map(PRIORITY.__getitem__, map(common_item_fn, data)))
+def priority_sum(items):
+    return sum(map(PRIORITY.__getitem__, items))
 
 
 def main():
-    part1 = priority_sum(common_item_1, read_data())
-    part2 = priority_sum(common_item_2, batch_data())
+    part1 = priority_sum(map(common_item_1, read_data()))
+    part2 = priority_sum(map(common_item_2, batch_data(read_data())))
     print(f'part1: {part1}\npart2: {part2}')
 
 
