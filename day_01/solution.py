@@ -1,15 +1,37 @@
-# %%
-with open('input.txt') as f:
-    data_string = f.read()
+import heapq
 
-# %%
-max_ = max(sum(map(int, s.split('\n'))) for s in data_string[:-1].split('\n\n'))
 
-print(f"Max: {max_}")
+def read_data():
+    with open('input.txt') as f:
+        items = []
+        for line in f:
+            if line == '\n':
+                yield items
+                items = []
+            else:
+                items.append(int(line))
+        yield items
 
-# %%
-sum_top_3 = sum(sorted(sum(map(int, s.split('\n'))) for s in data_string[:-1].split('\n\n'))[-3:])
 
-print(f"Top 3 sum: {sum_top_3}")
+def max_sum():
+    return max(map(sum, read_data()))
 
-# %%
+
+def sum_top3_sum():
+    heap = []
+    for s in map(sum, read_data()):
+        if len(heap) < 3:
+            heapq.heappush(heap, s)
+        else:
+            heapq.heappushpop(heap, s)
+    return sum(heap)
+
+
+def main():
+    part1 = max_sum()
+    part2 = sum_top3_sum()
+    print(f'part1: {part1}\npart2: {part2}')
+
+
+if __name__ == '__main__':
+    main()
