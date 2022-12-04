@@ -1,16 +1,11 @@
 import heapq
+from itertools import takewhile
 
 
 def read_data():
     with open('input.txt') as f:
-        items = []
-        for line in f:
-            if line == '\n':
-                yield items
-                items = []
-            else:
-                items.append(int(line))
-        yield items
+        while items := list(map(int, takewhile(lambda line: line != '\n', f))):
+            yield items
 
 
 def max_sum():
