@@ -25,7 +25,7 @@ def read_moves(input_file: str) -> Generator[tuple[int, int, int], None, None]:
     pattern = re.compile(r'move (\d+) from (\d+) to (\d+)')
 
     with open(input_file) as f:
-        for line in dropwhile(lambda line: not line.startswith('move'), f):
+        for line in dropwhile(lambda line: pattern.search(line) is None, f):
             match = pattern.match(line)
             yield tuple(map(int, match.groups()))
 
