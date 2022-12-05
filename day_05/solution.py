@@ -11,10 +11,6 @@ def read_stacks(input_file: str) -> list[list[str]]:
         f.seek(0)
 
         for line in takewhile(lambda line: line.lstrip().startswith('['), f):
-
-            if stacks is None:
-                stacks = [[] for _ in range((len(line) + 1) // 4)]
-
             for i, letter in enumerate(line[1::4]):
                 if letter != ' ':
                     stacks[i].append(letter)
