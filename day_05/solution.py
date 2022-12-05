@@ -1,21 +1,20 @@
 import re
 from itertools import takewhile, dropwhile
-from typing import Generator, Any
-
-
-def _read_n_stacks(input_file: str) -> int:
-    pattern = re.compile(r'(\d+)\s+$')
-
-    with open(input_file) as f:
-        match = next(match for match in map(pattern.search, f) if match)
-        return int(match.group(1))
+from typing import Generator
 
 
 def read_stacks(input_file: str) -> list[list[str]]:
-    stacks = [[] for _ in range(_read_n_stacks(input_file))]
-
     with open(input_file) as f:
-        for line in takewhile(lambda line: not line[1].isdigit(), f):
+
+        n_stacks = (len(f.readline()) + 1) // 4
+        stacks = [[] for _ in range(n_stacks)]
+        f.seek(0)
+
+        for line in takewhile(lambda line: line.lstrip().startswith('['), f):
+
+            if stacks is None:
+                stacks = [[] for _ in range((len(line) + 1) // 4)]
+
             for i, letter in enumerate(line[1::4]):
                 if letter != ' ':
                     stacks[i].append(letter)
@@ -30,14 +29,14 @@ def read_moves(input_file: str) -> Generator[tuple[int, int, int], None, None]:
     pattern = re.compile(r'move (\d+) from (\d+) to (\d+)')
 
     with open(input_file) as f:
-        for line in dropwhile(lambda line: not line.startswith('m'), f):
+        for line in dropwhile(lambda line: not line.startswith('move'), f):
             match = pattern.match(line)
             yield tuple(map(int, match.groups()))
 
 
 class MultiStack:
 
-    def __init__(self, stacks: list[list[Any]]) -> None:
+    def __init__(self, stacks: list[list]) -> None:
         self.stacks = stacks
 
     def move_1(self, num: int, source: int, target: int) -> None:
@@ -51,7 +50,7 @@ class MultiStack:
         for _ in range(num):
             self.stacks[target].append(t.pop())
 
-    def peek(self) -> list[Any]:
+    def peek(self) -> list:
         return [stack[-1] for stack in self.stacks]
 
 
