@@ -1,5 +1,5 @@
 import re
-from itertools import takewhile, dropwhile
+from itertools import takewhile
 from typing import Generator
 
 
@@ -23,10 +23,8 @@ def read_stacks(input_file: str) -> list[list[str]]:
 
 def read_moves(input_file: str) -> Generator[tuple[int, int, int], None, None]:
     pattern = re.compile(r'move (\d+) from (\d+) to (\d+)')
-
     with open(input_file) as f:
-        for line in dropwhile(lambda line: pattern.search(line) is None, f):
-            match = pattern.match(line)
+        for match in filter(bool, map(pattern.search, f)):
             yield tuple(map(int, match.groups()))
 
 
