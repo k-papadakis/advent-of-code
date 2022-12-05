@@ -1,12 +1,20 @@
-# %%
-from itertools import takewhile, dropwhile
 import re
+from itertools import takewhile, dropwhile
+from typing import Generator, Any
 
 
-def read_stacks():
-    stacks = [[] for _ in range(9)]
-    
-    with open('input.txt') as f:
+def _read_n_stacks(input_file: str) -> int:
+    pattern = re.compile(r'(\d+)\s+$')
+
+    with open(input_file) as f:
+        match = next(match for match in map(pattern.search, f) if match)
+        return int(match.group(1))
+
+
+def read_stacks(input_file: str) -> list[list[str]]:
+    stacks = [[] for _ in range(_read_n_stacks(input_file))]
+
+    with open(input_file) as f:
         for line in takewhile(lambda line: not line[1].isdigit(), f):
             for i, letter in enumerate(line[1::4]):
                 if letter != ' ':
@@ -18,55 +26,50 @@ def read_stacks():
     return stacks
 
 
-def read_moves():
-    pattern = re.compile(r'move (\d+) from (\d+) to (\d+)\n')
-    
-    with open('input.txt') as f:
+def read_moves(input_file: str) -> Generator[tuple[int, int, int], None, None]:
+    pattern = re.compile(r'move (\d+) from (\d+) to (\d+)')
+
+    with open(input_file) as f:
         for line in dropwhile(lambda line: not line.startswith('m'), f):
             match = pattern.match(line)
             yield tuple(map(int, match.groups()))
 
 
-def do_move_1(stacks, instruction):
-    num, source, target = instruction
-    for _ in range(num):
-        stacks[target-1].append(stacks[source-1].pop())
-    return stacks
+class MultiStack:
+
+    def __init__(self, stacks: list[list[Any]]) -> None:
+        self.stacks = stacks
+
+    def move_1(self, num: int, source: int, target: int) -> None:
+        for _ in range(num):
+            self.stacks[target].append(self.stacks[source].pop())
+
+    def move_2(self, num: int, source: int, target: int) -> None:
+        t = []
+        for _ in range(num):
+            t.append(self.stacks[source].pop())
+        for _ in range(num):
+            self.stacks[target].append(t.pop())
+
+    def peek(self) -> list[Any]:
+        return [stack[-1] for stack in self.stacks]
 
 
-# TODO: Implement a class
+def move_all(input_file, move_fn_name):
+    multistack = MultiStack(read_stacks(input_file))
+    move = getattr(multistack, move_fn_name)
 
-def do_moves(stacks, instructions, move_fn):
-    for instruction in instructions:
-        move_fn(stacks, instruction)
-    return stacks
+    for num, source, target in read_moves(input_file):
+        move(num, source - 1, target - 1)
 
-def part1():
-    stacks = read_stacks()
-    moves = read_moves()
-    stacks = do_moves(stacks, moves, do_move_1)
-    return ''.join(stack[-1] for stack in stacks)
+    return ''.join(multistack.peek())
 
 
-# %%
-
-stacks = read_stacks()
-moves = read_moves()
-
-def do_move_2(stacks, instruction):
-    num, source, target = instruction
-    t = []
-    for _ in range(num):
-        t.append(stacks[source-1].pop())
-    for _ in range(num):
-        stacks[target-1].append(t.pop())
-    return stacks
+def main():
+    part1 = move_all('input.txt', 'move_1')
+    part2 = move_all('input.txt', 'move_2')
+    print(f"part1: {part1}\npart2: {part2}")
 
 
-do_moves(stacks, moves, do_move_2)
-''.join(stack[-1] for stack in stacks)
-
-
-
-
-# %%
+if __name__ == '__main__':
+    main()
