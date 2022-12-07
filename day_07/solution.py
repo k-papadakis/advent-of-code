@@ -1,4 +1,3 @@
-# %%
 from typing import Optional
 
 
@@ -50,24 +49,55 @@ def parse_tree(lines):
     return root
 
 
-
-total = 0
-
 def bottom_up_sum(node):
-    global total
-    
-    # leaf file node
-    if node.size is not None:
-        return node.size
-    
-    s = sum(bottom_up_sum(child) for child in node.children.values())
-    
-    if s <= 100_000:
-        total += s
-    
-    return s 
+    sum_below_thresh = 0
+
+    def _bottom_up_sum(node):
+        nonlocal sum_below_thresh
+
+        # leaf file node
+        if node.size is not None:
+            return node.size
+
+        s = sum(_bottom_up_sum(child) for child in node.children.values())
+
+        if s <= 100_000:
+            sum_below_thresh += s
+
+        return s
+
+    return _bottom_up_sum(node), sum_below_thresh
 
 
-root = parse_tree(read_data('input.txt'))
-bottom_up_sum(root)
-total
+def min_deletion(node, space_to_free):
+    res = float('Infinity')
+
+    def _bottom_up_sum(node):
+        nonlocal res
+
+        # leaf file node
+        if node.size is not None:
+            return node.size
+
+        s = sum(_bottom_up_sum(child) for child in node.children.values())
+
+        if space_to_free < s < res:
+            res = s
+
+        return s
+
+    return _bottom_up_sum(node), res
+
+
+def main():
+    root = parse_tree(read_data('input.txt'))
+    total, part1 = bottom_up_sum(root)
+    free_space = 70_000_000 - total
+    space_to_free = max(0, 30_000_000 - free_space)
+    _, part2 = min_deletion(root, space_to_free)
+
+    print(f'part1: {part1}\npart2: {part2}')
+
+
+if __name__ == '__main__':
+    main()
