@@ -1,4 +1,5 @@
-from typing import Optional
+from functools import reduce
+from typing import Iterable, Optional
 
 
 class TreeNode:
@@ -9,16 +10,16 @@ class TreeNode:
         size: Optional[int] = None,
         children: Optional[dict[str, 'TreeNode']] = None,
         parent: Optional['TreeNode'] = None
-    ):
+    ) -> None:
         self.name = name
         self.size = size
         self.children = children if children is not None else {}
         self.parent = parent
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'TreeNode(name={self.name}, size={self.size}, children={list(self.children.values())})'
 
-    def __str__(self, level=0):
+    def __str__(self, level: int = 0) -> str:
         ret = '\t' * level + self.name + (f' {self.size or ""}') + '\n'
         for child in self.children.values():
             ret += child.__str__(level + 1)
@@ -31,7 +32,7 @@ def read_data(input_file):
             yield line.rstrip('\n')
 
 
-def parse_tree(lines):
+def parse_tree(lines: Iterable[str]) -> TreeNode:
 
     lines = iter(lines)
     next(lines)
@@ -55,54 +56,31 @@ def parse_tree(lines):
     return root
 
 
-def bottom_up_sum(node: TreeNode):
-    sum_below_thresh = 0
+def bottom_up_sum(node: TreeNode) -> tuple[int, int]:
+    if node.size is not None:
+        return node.size, 0
 
-    def _bottom_up_sum(node: TreeNode):
-        nonlocal sum_below_thresh
+    s, t = reduce(lambda u, v: (u[0] + v[0], u[1] + v[1]), map(bottom_up_sum, node.children.values()))
 
-        # leaf file node
-        if node.size is not None:
-            return node.size
-
-        s = sum(map(_bottom_up_sum, node.children.values()))
-
-        if s <= 100_000:
-            sum_below_thresh += s
-
-        return s
-
-    return _bottom_up_sum(node), sum_below_thresh
+    return s, t + (s if s <= 100_000 else 0)
 
 
-def min_deletion(node: TreeNode, space_to_free):
-    res = float('Infinity')
+def min_deletion(node: TreeNode, space_to_free: int) -> tuple[int, int]:
+    if node.size is not None:
+        return node.size, float('Infinity')
 
-    def _bottom_up_sum(node: TreeNode):
-        nonlocal res
+    s, t = reduce(
+        lambda u, v: (u[0] + v[0], min(u[1], v[1])),
+        (min_deletion(child, space_to_free) for child in node.children.values())
+    )
 
-        # leaf file node
-        if node.size is not None:
-            return node.size
-
-        s = sum(map(_bottom_up_sum, node.children.values()))
-
-        if space_to_free < s < res:
-            res = s
-
-        return s
-
-    return _bottom_up_sum(node), res
+    return s, min(t, s) if s > space_to_free else t
 
 
-def main():
+def main() -> None:
     root = parse_tree(read_data('input.txt'))
-    # print(root)
-    # print(repr(root))
     total, part1 = bottom_up_sum(root)
-    free_space = 70_000_000 - total
-    space_to_free = max(0, 30_000_000 - free_space)
-    _, part2 = min_deletion(root, space_to_free)
+    _, part2 = min_deletion(root, total - 40_000_000)
 
     print(f'part1: {part1}\npart2: {part2}')
 
