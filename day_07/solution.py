@@ -74,7 +74,7 @@ def min_deletion(node: TreeNode, space_to_free: int) -> tuple[int, int]:
         (min_deletion(child, space_to_free) for child in node.children.values())
     )
 
-    return s, min(t, s) if s > space_to_free else t
+    return s, s if space_to_free < s < t else t
 
 
 def main() -> None:
