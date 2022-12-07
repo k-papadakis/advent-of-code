@@ -65,7 +65,7 @@ def bottom_up_sum(node: TreeNode):
         if node.size is not None:
             return node.size
 
-        s = sum(_bottom_up_sum(child) for child in node.children.values())
+        s = sum(map(_bottom_up_sum, node.children.values()))
 
         if s <= 100_000:
             sum_below_thresh += s
@@ -85,7 +85,7 @@ def min_deletion(node: TreeNode, space_to_free):
         if node.size is not None:
             return node.size
 
-        s = sum(_bottom_up_sum(child) for child in node.children.values())
+        s = sum(map(_bottom_up_sum, node.children.values()))
 
         if space_to_free < s < res:
             res = s
