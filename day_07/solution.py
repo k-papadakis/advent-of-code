@@ -18,6 +18,12 @@ class TreeNode:
     def __repr__(self):
         return f'TreeNode(name={self.name}, size={self.size}, children={list(self.children.values())})'
 
+    def __str__(self, level=0):
+        ret = '\t' * level + self.name + (f' {self.size or ""}') + '\n'
+        for child in self.children.values():
+            ret += child.__str__(level + 1)
+        return ret
+
 
 def read_data(input_file):
     with open(input_file) as f:
@@ -44,15 +50,15 @@ def parse_tree(lines):
             cur.children.setdefault(dirname, TreeNode(name=dirname, parent=cur))
         else:
             size, filename = line.split(' ', 1)
-            cur.children[filename] = TreeNode(name=filename, size=int(size), parent=cur)
+            cur.children.setdefault(filename, TreeNode(name=filename, size=int(size), parent=cur))
 
     return root
 
 
-def bottom_up_sum(node):
+def bottom_up_sum(node: TreeNode):
     sum_below_thresh = 0
 
-    def _bottom_up_sum(node):
+    def _bottom_up_sum(node: TreeNode):
         nonlocal sum_below_thresh
 
         # leaf file node
@@ -69,10 +75,10 @@ def bottom_up_sum(node):
     return _bottom_up_sum(node), sum_below_thresh
 
 
-def min_deletion(node, space_to_free):
+def min_deletion(node: TreeNode, space_to_free):
     res = float('Infinity')
 
-    def _bottom_up_sum(node):
+    def _bottom_up_sum(node: TreeNode):
         nonlocal res
 
         # leaf file node
@@ -91,6 +97,8 @@ def min_deletion(node, space_to_free):
 
 def main():
     root = parse_tree(read_data('input.txt'))
+    # print(root)
+    # print(repr(root))
     total, part1 = bottom_up_sum(root)
     free_space = 70_000_000 - total
     space_to_free = max(0, 30_000_000 - free_space)
