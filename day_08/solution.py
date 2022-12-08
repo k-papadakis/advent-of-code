@@ -75,7 +75,7 @@ def part2(array):
 
 def main():
     a = read_data('input.txt')
-    print(f'part: {part1(a)}\npart2: {part2(a)}')
+    print(f'part1: {part1(a)}\npart2: {part2(a)}')
 
 
 if __name__ == '__main__':
