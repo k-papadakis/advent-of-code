@@ -57,8 +57,8 @@ def parse_tree(lines: Iterable[str]) -> TreeNode:
 
 
 def bottom_up_sum(node: TreeNode) -> tuple[int, int]:
-    if node.size is not None:
-        return node.size, 0
+    if not node.children:
+        return node.size if node.size is not None else 0, 0
 
     s, t = reduce(lambda u, v: (u[0] + v[0], u[1] + v[1]), map(bottom_up_sum, node.children.values()))
 
@@ -66,8 +66,8 @@ def bottom_up_sum(node: TreeNode) -> tuple[int, int]:
 
 
 def min_deletion(node: TreeNode, space_to_free: int) -> tuple[int, int]:
-    if node.size is not None:
-        return node.size, float('Infinity')
+    if not node.children:
+        return node.size if node.size is not None else 0, float('Infinity')
 
     s, t = reduce(
         lambda u, v: (u[0] + v[0], min(u[1], v[1])),
@@ -80,7 +80,7 @@ def min_deletion(node: TreeNode, space_to_free: int) -> tuple[int, int]:
 def main() -> None:
     root = parse_tree(read_data('input.txt'))
     total, part1 = bottom_up_sum(root)
-    _, part2 = min_deletion(root, total - 40_000_000)
+    _, part2 = min_deletion(root, total - (70_000_000 - 30_000_000))
 
     print(f'part1: {part1}\npart2: {part2}')
 
