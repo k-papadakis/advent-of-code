@@ -47,4 +47,29 @@ def part1(input_file):
     return sum(map(sum, v))
 
 
-part1('input.txt')
+def part2(input_file):
+    a = read_data(input_file)
+    m, n = len(a), len(a[0])
+    scores = [[1 for _ in range(n)] for _ in range(m)]
+
+    for gen in iter_rows(m, n), iter_cols(m, n), iter_rows_reversed(m, n), iter_cols_reversed(m, n):
+        for indices in gen:
+            max_so_far = -inf
+            steps_since_max = 0
+
+            for t, (i, j) in enumerate(indices):
+                steps_since_max += 1
+                if a[i][j] > max_so_far:
+                    max_so_far = a[i][j]
+                    steps_since_max = 0
+                    scores[i][j] *= t
+                elif a[i][j] == max_so_far:
+                    scores[i][j] *= steps_since_max
+                    steps_since_max = 0
+                else:
+                    scores[i][j] *= steps_since_max
+
+    return max(map(max, scores))
+
+
+print(part2('mini.txt'))
