@@ -1,9 +1,8 @@
-# %%
 from itertools import accumulate
-from math import inf
+from math import inf, prod
 
 
-def read_data(input_file):
+def read_data(input_file) -> list[list[int]]:
     with open(input_file) as f:
         return [list(map(int, line)) for line in f.read().splitlines()]
 
@@ -28,7 +27,7 @@ def iter_cols_reversed(m, n):
         yield [(i, j) for i in reversed(range(m))]
 
 
-def visibility(gen, a, v):
+def visibility(gen, a, v) -> None:
     for indices in gen:
         max_so_far = accumulate((a[i][j] for i, j in indices), max, initial=-inf)
         for (i, j), M in zip(indices, max_so_far):
@@ -36,8 +35,7 @@ def visibility(gen, a, v):
                 v[i][j] = True
 
 
-def part1(input_file):
-    a = read_data(input_file)
+def part1(a: list[list[int]]) -> int:
     m, n = len(a), len(a[0])
     v = [[False for _ in range(n)] for _ in range(m)]
 
@@ -47,29 +45,32 @@ def part1(input_file):
     return sum(map(sum, v))
 
 
-def part2(input_file):
-    a = read_data(input_file)
+def find_visibility(a, i, j, direction):
+
     m, n = len(a), len(a[0])
-    scores = [[1 for _ in range(n)] for _ in range(m)]
+    n_steps = 0
+    x, y = i, j
 
-    for gen in iter_rows(m, n), iter_cols(m, n), iter_rows_reversed(m, n), iter_cols_reversed(m, n):
-        for indices in gen:
-            max_so_far = -inf
-            steps_since_max = 0
+    while (x := x + direction[0]) in range(m) and (y := y + direction[1]) in range(n):
+        n_steps += 1
+        if a[x][y] >= a[i][j]:
+            break
 
-            for t, (i, j) in enumerate(indices):
-                steps_since_max += 1
-                if a[i][j] > max_so_far:
-                    max_so_far = a[i][j]
-                    steps_since_max = 0
-                    scores[i][j] *= t
-                elif a[i][j] == max_so_far:
-                    scores[i][j] *= steps_since_max
-                    steps_since_max = 0
-                else:
-                    scores[i][j] *= steps_since_max
-
-    return max(map(max, scores))
+    return n_steps
 
 
-print(part2('mini.txt'))
+def part2(a):
+    m, n = len(a), len(a[0])
+    directions = (0, 1), (1, 0), (-1, 0), (0, -1)
+    return max(
+        prod(find_visibility(a, i, j, direction) for direction in directions) for i in range(m) for j in range(n)
+    )
+
+
+def main():
+    a = read_data('input.txt')
+    print(f'part: {part1(a)}\npart2: {part2(a)}')
+
+
+if __name__ == '__main__':
+    main()
