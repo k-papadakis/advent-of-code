@@ -7,21 +7,6 @@ def read_data(input_file):
             yield dirmap[direction], int(n_steps)
 
 
-# %%
-# Track relative position of the head. It can be any of:
-
-# UL U UR
-#  L *  R
-# DL D DR
-
-# (-1,  1) ( 0, 1) ( 1, 1)
-# ( 0, -1) ( 0, 0) ( 0, 1)
-# (-1, -1) (-1, 0) (-1, 1)
-
-# If l1(pos) == 2 and move goes outside the grid, then move diagonally to the position the head was at
-# If l1(pos) == 1 and move goes outside the grid, move to the same direction as the head
-
-
 def l1(v):
     return abs(v[0]) + abs(v[1])
 
@@ -38,31 +23,57 @@ def arg_non_zero(v):
     return 0 if v[0] != 0 else 1
 
 
+def move_follower(leader, follower, direction):
+    relative_h_pos = subtract(leader, follower)
+
+    if l1(relative_h_pos) == 2:
+        idx = arg_non_zero(direction)
+        if relative_h_pos[idx] == direction[idx]:
+            follower = leader
+    else:
+        idx = arg_non_zero(direction)
+        if relative_h_pos[idx] == direction[idx]:
+            follower = add(follower, direction)
+
+    return follower
+
+
 def part1(data):
-    h_pos = t_pos = 0, 0
-    visited = {t_pos}
+    head = tail = 0, 0
+    visited = {tail}
 
     for direction, n_steps in data:
         for _ in range(n_steps):
-
-            relative_h_pos = subtract(h_pos, t_pos)
-
-            if l1(relative_h_pos) == 2:
-                idx = arg_non_zero(direction)
-                if relative_h_pos[idx] == direction[idx]:
-                    t_pos = h_pos
-            else:
-                idx = arg_non_zero(direction)
-                if relative_h_pos[idx] == direction[idx]:
-                    t_pos = add(t_pos, direction)
-
-            h_pos = add(h_pos, direction)
-
-            visited.add(t_pos)
+            tail = move_follower(tail, head, direction)
+            head = add(head, direction)
+            visited.add(tail)
 
     return len(visited)
 
 
-print(part1(read_data('input.txt')))
+def part2(data):
+    knots = [(0, 0)] * 10
+    visited = {knots[-1]}
+
+    for head_direction, n_steps in data:
+        for _ in range(n_steps):
+            direction = head_direction
+            print(f'Moving head by {direction}')
+
+            for i in range(len(knots) - 1):
+                follower_old = knots[i + 1]
+                knots[i + 1] = move_follower(knots[i], knots[i + 1], direction)
+                knots[i] = add(knots[i], direction)
+                direction = subtract(knots[i + 1], follower_old)
+                print(direction)
+                
+            visited.add(knots[-1])
+
+
+    print(visited)
+    return len(visited)
+
+
+part2(read_data('mini.txt'))
 
 # %%
