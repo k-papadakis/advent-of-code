@@ -29,12 +29,7 @@ def compare(a, b):
         if t != 0:
             return t
 
-    if len(a) < len(b):
-        return -1
-    elif len(a) > len(b):
-        return 1
-    else:
-        return 0
+    return compare(len(a), len(b))
 
 
 def part1(data):
