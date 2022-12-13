@@ -9,42 +9,35 @@ def read_data(input_file):
 
 def compare(a, b):
     if isinstance(a, int) and isinstance(b, int):
-        return a <= b
+        if a < b:
+            return 1
+        elif a > b:
+            return -1
+        else:
+            return 0
 
     if isinstance(a, int):
-        return compare(a, b[0]) if b else True
+        return compare([a], b)
 
     if isinstance(b, int):
-        return not compare(b, a)
+        return compare(a, [b])
 
-    # From this point, both a and b are lists.
+    for x, y in zip(a, b):
+        if (t := compare(x, y)) != 0:
+            return t
 
-    if not a:
-        return True
-
-    if not b:
-        return not a
-
-    return len(a) <= len(b) and all(compare(x, y) for x, y in zip(a, b))
-
-
-def test_int_list():
-    assert compare(1, [2, 3, 4])
-    assert not compare([2, 3, 4], 1)
+    if len(a) < len(b):
+        return 1
+    elif len(a) > len(b):
+        return -1
+    else:
+        return 0
 
 
-def test_int_int():
-    assert compare(1, 2)
-    assert not compare(2, 1)
+def main():
+    part1 = sum(i for i, (a, b) in enumerate(read_data('input.txt'), 1) if compare(a, b) != -1)
+    print(f'part1: {part1}')
 
 
-def test_list_list():
-    assert compare([1, 3], [2, 4, 5])
-    assert not compare([1, 3, 5], [2, 4])
-    assert not compare([1, 2, 3], [5, 0])
-
-
-# for i, (a, b) in enumerate(read_data('mini.txt'), 1):
-#     print(i, compare(a, b))
-
-print(sum(i for i, (a, b) in enumerate(read_data('input.txt'), 1) if compare(a, b)))
+if __name__ == '__main__':
+    main()
