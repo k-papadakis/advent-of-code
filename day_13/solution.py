@@ -24,8 +24,8 @@ def compare(a, b):
     if isinstance(b, int):
         return compare(a, [b])
 
-    for x, y in zip(a, b):
-        if (t := compare(x, y)) != 0:
+    for t in map(compare, a, b):
+        if t != 0:
             return t
 
     if len(a) < len(b):
