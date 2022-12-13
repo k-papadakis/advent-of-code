@@ -1,6 +1,7 @@
 from itertools import chain, takewhile
 from functools import cmp_to_key
 from math import prod
+from bisect import bisect_right
 
 
 def read_data(input_file):
@@ -43,8 +44,9 @@ def part1(data):
 def part2(data):
     extras = ([[2]], [[6]])
     data_cat = chain(extras, chain.from_iterable(data))
-    data_cat_increasing = sorted(data_cat, key=cmp_to_key(compare))
-    return prod(map(lambda i: i + 1, map(data_cat_increasing.index, extras)))
+    key_fn = cmp_to_key(compare)
+    data_cat_increasing = sorted(data_cat, key=key_fn)
+    return prod(bisect_right(data_cat_increasing, key_fn(extra), key=key_fn) for extra in extras)
 
 
 def main():
