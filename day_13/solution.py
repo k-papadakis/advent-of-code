@@ -12,12 +12,7 @@ def read_data(input_file):
 
 def compare(a, b):
     if isinstance(a, int) and isinstance(b, int):
-        if a < b:
-            return -1
-        elif a > b:
-            return 1
-        else:
-            return 0
+        return a - b
 
     if isinstance(a, int):
         return compare([a], b)
@@ -33,7 +28,7 @@ def compare(a, b):
 
 
 def part1(data):
-    return sum(i for i, (a, b) in enumerate(data, 1) if compare(a, b) != 1)
+    return sum(i for i, (a, b) in enumerate(data, 1) if compare(a, b) <= 0)
 
 
 def part2(data):
