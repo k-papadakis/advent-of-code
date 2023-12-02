@@ -17,6 +17,9 @@ class GameReveal:
         }
         return cls(**init_kwargs)
 
+    def power(self):
+        return self.red * self.green * self.blue
+
 
 @dataclass
 class Game:
@@ -42,6 +45,25 @@ class Game:
         )
         return res
 
+    def min_possible_cubes(self):
+        min_red = 0
+        min_green = 0
+        min_blue = 0
+
+        for reveal in self.reveals:
+            min_red = max(min_red, reveal.red)
+            min_green = max(min_green, reveal.green)
+            min_blue = max(min_blue, reveal.blue)
+
+        return min_red, min_green, min_blue
+
+    def min_possible_reveal(self):
+        red, green, blue = self.min_possible_cubes()
+        return GameReveal(red=red, green=green, blue=blue)
+
+    def min_posible_power(self):
+        return self.min_possible_reveal().power()
+
 
 def read_data():
     with open("input.txt") as f:
@@ -55,5 +77,10 @@ def main() -> None:
         for game in read_data()
         if game.is_possible(max_red=12, max_green=13, max_blue=14)
     )
+    part_2 = sum(game.min_posible_power() for game in read_data())
 
-    print(f"{part_1 = }")
+    print(f"{part_1 = }, {part_2 = }")
+
+
+if __name__ == "__main__":
+    main()
