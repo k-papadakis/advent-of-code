@@ -1,83 +1,79 @@
 import re
+from collections.abc import Generator
 from dataclasses import dataclass
 
 
+def _assert_match(match: re.Match[str] | None) -> re.Match[str]:
+    if not match:
+        raise ValueError("Could not match pattern.")
+    return match
+
+
 @dataclass
-class GameReveal:
+class CubeSet:
     red: int = 0
     green: int = 0
     blue: int = 0
 
     @classmethod
-    def from_string(cls, reveal_str: str) -> "GameReveal":
-        pattern = re.compile(r"(?P<num>\d+) (?P<color>red|green|blue)")
+    def from_string(cls, reveal_str: str) -> "CubeSet":
+        pattern = re.compile(r"(?P<num>\d+) (?P<color>red|green|blue)$")
         init_kwargs = {
-            m.group("color"): int(m.group("num"))
-            for m in map(pattern.match, reveal_str.split(", "))
+            m["color"]: int(m["num"])
+            for m in map(_assert_match, map(pattern.match, reveal_str.split(", ")))
         }
         return cls(**init_kwargs)
 
-    def power(self):
+    def power(self) -> int:
         return self.red * self.green * self.blue
 
 
 @dataclass
 class Game:
     id: int
-    reveals: list[GameReveal]
+    reveals: list[CubeSet]
 
     @classmethod
     def from_string(cls, game_str: str) -> "Game":
-        game_id_str, reveals_str = re.match(r"Game (.*?): (.*)", game_str).groups()
+        game_id_str, reveals_str = _assert_match(
+            re.match(r"Game (.*?): (.*)", game_str)
+        ).groups()
         game_id = int(game_id_str)
         reveals = [
-            GameReveal.from_string(reveal_str) for reveal_str in reveals_str.split("; ")
+            CubeSet.from_string(reveal_str) for reveal_str in reveals_str.split("; ")
         ]
 
         return cls(id=game_id, reveals=reveals)
 
-    def is_possible(self, max_red: int, max_green: int, max_blue: int) -> bool:
+    def is_possible(self, red: int, green: int, blue: int) -> bool:
         res = all(
-            reveal.red <= max_red
-            and reveal.green <= max_green
-            and reveal.blue <= max_blue
+            reveal.red <= red and reveal.green <= green and reveal.blue <= blue
             for reveal in self.reveals
         )
         return res
 
-    def min_possible_cubes(self):
-        min_red = 0
-        min_green = 0
-        min_blue = 0
+    def minimal_bag_cubeset(self) -> CubeSet:
+        red = 0
+        green = 0
+        blue = 0
 
         for reveal in self.reveals:
-            min_red = max(min_red, reveal.red)
-            min_green = max(min_green, reveal.green)
-            min_blue = max(min_blue, reveal.blue)
+            red = max(red, reveal.red)
+            green = max(green, reveal.green)
+            blue = max(blue, reveal.blue)
 
-        return min_red, min_green, min_blue
-
-    def min_possible_reveal(self):
-        red, green, blue = self.min_possible_cubes()
-        return GameReveal(red=red, green=green, blue=blue)
-
-    def min_posible_power(self):
-        return self.min_possible_reveal().power()
+        return CubeSet(red, green, blue)
 
 
-def read_data():
+def read_data() -> Generator[Game, None, None]:
     with open("input.txt") as f:
         for line in f:
             yield Game.from_string(line.rstrip("\n"))
 
 
 def main() -> None:
-    part_1 = sum(
-        game.id
-        for game in read_data()
-        if game.is_possible(max_red=12, max_green=13, max_blue=14)
-    )
-    part_2 = sum(game.min_posible_power() for game in read_data())
+    part_1 = sum(game.id for game in read_data() if game.is_possible(12, 13, 14))
+    part_2 = sum(game.minimal_bag_cubeset().power() for game in read_data())
 
     print(f"{part_1 = }, {part_2 = }")
 
