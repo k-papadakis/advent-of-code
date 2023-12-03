@@ -16,11 +16,11 @@ class CubeSet:
     blue: int = 0
 
     @classmethod
-    def from_string(cls, reveal_str: str) -> "CubeSet":
+    def from_string(cls, s: str) -> "CubeSet":
         pattern = re.compile(r"(?P<num>\d+) (?P<color>red|green|blue)$")
         init_kwargs = {
             m["color"]: int(m["num"])
-            for m in map(_assert_match, map(pattern.match, reveal_str.split(", ")))
+            for m in map(_assert_match, map(pattern.match, s.split(", ")))
         }
         return cls(**init_kwargs)
 
@@ -34,9 +34,9 @@ class Game:
     reveals: list[CubeSet]
 
     @classmethod
-    def from_string(cls, game_str: str) -> "Game":
+    def from_string(cls, s: str) -> "Game":
         game_id_str, reveals_str = _assert_match(
-            re.match(r"Game (.*?): (.*)", game_str)
+            re.match(r"Game (.*?): (.*)", s)
         ).groups()
         game_id = int(game_id_str)
         reveals = [
