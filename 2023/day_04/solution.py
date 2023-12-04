@@ -1,7 +1,6 @@
-# %%
 import re
+from collections.abc import Generator, Iterable
 from dataclasses import dataclass
-from collections.abc import Generator
 
 
 @dataclass
@@ -38,17 +37,25 @@ def read_input() -> Generator[Card, None, None]:
             yield Card.from_string(line.rstrip("\n"))
 
 
+def total_cards(cards: Iterable[Card]) -> int:
+    wins = [card.num_wins() for card in cards]
+    n = len(wins)
+
+    v = [1] * n
+
+    for i in range(n):
+        for j in range(i + 1, i + wins[i] + 1):
+            v[j] += v[i]
+
+    return sum(v)
+
+
 def main():
     part_1 = sum(card.score() for card in read_input())
+    part_2 = total_cards(read_input())
 
-    print(f"{part_1 = }")
+    print(f"{part_1 = } {part_2 = }")
 
 
-# if __name__ == "__main__":
-#     main()
-
-# %%
-wins = [card.num_wins() for card in read_input()]
-
-# %%
-
+if __name__ == "__main__":
+    main()
