@@ -1,5 +1,7 @@
+# %%
 import re
 from dataclasses import dataclass
+from collections.abc import Generator
 
 
 @dataclass
@@ -22,12 +24,15 @@ class Card:
 
         return cls(card_id, winning_numbers, numbers)
 
+    def num_wins(self) -> int:
+        return sum(x in self.winning_numbers for x in self.numbers)
+
     def score(self) -> int:
-        num_winners = sum(x in self.winning_numbers for x in self.numbers)
-        return 2 ** (num_winners - 1) if num_winners > 0 else 0
+        n = self.num_wins()
+        return 2 ** (n - 1) if n > 0 else 0
 
 
-def read_input():
+def read_input() -> Generator[Card, None, None]:
     with open("input.txt") as f:
         for line in f:
             yield Card.from_string(line.rstrip("\n"))
@@ -39,5 +44,11 @@ def main():
     print(f"{part_1 = }")
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
+
+# %%
+wins = [card.num_wins() for card in read_input()]
+
+# %%
+
