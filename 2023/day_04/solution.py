@@ -23,12 +23,14 @@ class Card:
 
         return cls(card_id, winning_numbers, numbers)
 
+    def is_winning(self, x: int):
+        return x in self.winning_numbers
+
     def num_wins(self) -> int:
-        return sum(x in self.winning_numbers for x in self.numbers)
+        return sum(self.is_winning(x) for x in self.numbers)
 
     def score(self) -> int:
-        n = self.num_wins()
-        return 2 ** (n - 1) if n > 0 else 0
+        return 2 ** (n - 1) if (n := self.num_wins()) > 0 else 0
 
 
 def read_input() -> Generator[Card, None, None]:
@@ -37,21 +39,25 @@ def read_input() -> Generator[Card, None, None]:
             yield Card.from_string(line.rstrip("\n"))
 
 
+def total_score(cards: Iterable[Card]) -> int:
+    return sum(card.score() for card in cards)
+
+
 def total_cards(cards: Iterable[Card]) -> int:
     wins = [card.num_wins() for card in cards]
     n = len(wins)
 
-    v = [1] * n
+    card_copies = [1] * n
 
     for i in range(n):
         for j in range(i + 1, i + wins[i] + 1):
-            v[j] += v[i]
+            card_copies[j] += card_copies[i]
 
-    return sum(v)
+    return sum(card_copies)
 
 
 def main():
-    part_1 = sum(card.score() for card in read_input())
+    part_1 = total_score(read_input())
     part_2 = total_cards(read_input())
 
     print(f"{part_1 = } {part_2 = }")
