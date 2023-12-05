@@ -15,7 +15,7 @@ class Card:
             r"Card +(?P<id>\d+): +(?P<winning_numbers>.*?) +\| +(?P<numbers>.*)", s
         )
         if not match:
-            raise ValueError("Could not match pattern")
+            raise ValueError("Could not match pattern.")
 
         card_id = int(match["id"])
         winning_numbers = set(map(int, match["winning_numbers"].split()))
@@ -23,7 +23,7 @@ class Card:
 
         return cls(card_id, winning_numbers, numbers)
 
-    def is_winning(self, x: int):
+    def is_winning(self, x: int) -> bool:
         return x in self.winning_numbers
 
     def num_wins(self) -> int:
