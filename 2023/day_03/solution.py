@@ -1,6 +1,6 @@
-import math
 from collections import defaultdict
 from collections.abc import Generator
+from typing import Any
 
 type Coordinate = tuple[int, int]
 
@@ -14,7 +14,9 @@ def issymbol(s: str) -> bool:
     return len(s) == 1 and s != "." and not s.isdigit()
 
 
-def neighbors(arr: list[list], i: int, j: int) -> Generator[Coordinate, None, None]:
+def neighbors(
+    arr: list[list[Any]], i: int, j: int
+) -> Generator[Coordinate, None, None]:
     m = len(arr)
     n = len(arr[0])
     for k, l in (
@@ -71,7 +73,7 @@ def get_gears(arr: list[list[str]]) -> dict[Coordinate, tuple[int, int]]:
 
     start: Coordinate | None = None
     bordering_stars: set[Coordinate] = set()
-    stars: dict[int, list[Coordinate]] = defaultdict(list)
+    stars: dict[Coordinate, list[int]] = defaultdict(list)
 
     for i in range(m):
         if start and bordering_stars:
@@ -99,7 +101,7 @@ def get_gears(arr: list[list[str]]) -> dict[Coordinate, tuple[int, int]]:
                 start = None
                 bordering_stars.clear()
 
-    gears = {k: tuple(v) for k, v in stars.items() if len(v) == 2}
+    gears = {k: (v[0], v[1]) for k, v in stars.items() if len(v) == 2}
     return gears
 
 
