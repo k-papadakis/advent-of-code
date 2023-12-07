@@ -1,13 +1,13 @@
 from collections import Counter
 
 
-def read_input() -> tuple[list[str], list[int]]:
-    with open("input.txt") as f:
+def read_input(path: str) -> tuple[list[str], list[int]]:
+    with open(path) as f:
         s = f.read()
-        
+
     hands, bids = zip(*map(str.split, s.splitlines()))
     bids = list(map(int, bids))
-    
+
     return hands, bids
 
 
@@ -25,8 +25,9 @@ def hands_comparison_key_2(hand: str):
     card_priority = {x: i for i, x in enumerate("J23456789TQKA")}
 
     c = Counter(hand)
-    if "J" in c:
-        c[c.most_common(1)[0][0]] += c.pop("J")
+    if "J" in c and len(c) > 1:
+        js = c.pop("J")
+        c[c.most_common(1)[0][0]] += js
     card_counts = sorted(c.values(), reverse=True)
 
     hand_priority = [card_priority[card] for card in hand]
@@ -52,7 +53,8 @@ def total_winnings(hands, bids, hands_comparison_key):
 
 
 def main():
-    hands, bids = read_input()
+    hands, bids = read_input("input.txt")
+
     part_1 = total_winnings(hands, bids, hands_comparison_key_1)
     part_2 = total_winnings(hands, bids, hands_comparison_key_2)
 
@@ -61,17 +63,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-    # hands = [
-    #     "32T3K",
-    #     "T55J5",
-    #     "KK677",
-    #     "KTJJT",
-    #     "QQQJA",
-    # ]
-
-    # for hand in hands:
-    #     print(hand)
-    #     print(hands_comparison_key_2(hand))
-    #     print()
-    # print(sorted(hands, key=hands_comparison_key_2))
