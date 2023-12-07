@@ -1,77 +1,41 @@
 from collections import Counter
-from enum import IntEnum, auto
-from functools import cached_property
-
-
-class HandType(IntEnum):
-    HIGH_CARD = auto()
-    ONE_PAIR = auto()
-    TWO_PAIR = auto()
-    THREE_OF_A_KIND = auto()
-    FULL_HOUSE = auto()
-    FOUR_OF_A_KIND = auto()
-    FIVE_OF_A_KIND = auto()
-
-
-class Hand:
-    card_pool = "A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"
-
-    def __init__(self, cards: str, bid: int):
-        assert len(cards) == 5 and set(cards) <= set(self.card_pool)
-        assert bid >= 0
-        self.cards = cards
-        self.bid = bid
-
-    @cached_property
-    def type(self) -> HandType:
-        # counter: dict[str, int] = dict.fromkeys(self.card_pool, 0)
-        # for card in self.cards:
-        #     counter[card] += 1
-        match sorted(Counter(self.cards).values()):
-            case [1, 1, 1, 1, 1]:
-                return HandType.HIGH_CARD
-            case [2, 1, 1, 1]:
-                return HandType.ONE_PAIR
-            case [2, 2, 1]:
-                return HandType.ONE_PAIR
-            case [3, 1, 1]:
-                return HandType.THREE_OF_A_KIND
-            case [3, 2]:
-                return HandType.FULL_HOUSE
-            case [4, 1]:
-                return HandType.FOUR_OF_A_KIND
-            case [5]:
-                return HandType.FIVE_OF_A_KIND
-            case _:
-                raise ValueError(f"Could not match hand type for cards {self.cards}.")
-
-    # def __eq__self()
 
 
 def read_input() -> tuple[list[str], list[int]]:
     with open("input.txt") as f:
         s = f.read()
+        
     hands, bids = zip(*map(str.split, s.splitlines()))
     bids = list(map(int, bids))
+    
     return hands, bids
 
 
-def card_counts(cards: str) -> list[int]:
-    return sorted(Counter(cards).values())
+def hands_comparison_key_1(hand: str):
+    card_priority = {x: i for i, x in enumerate("23456789TJQKA")}
 
-
-CARD_PRIORITY = {x: i for i, x in enumerate("23456789TJQKA")}
-
-
-def hands_comparison_key(hand: str):
     card_counts = sorted(Counter(hand).values(), reverse=True)
-    hand_priority = [CARD_PRIORITY[card] for card in hand]
+
+    hand_priority = [card_priority[card] for card in hand]
+
     return card_counts, hand_priority
 
 
-def main():
-    hands, bids = read_input()
-    part_1 = sum(
+def hands_comparison_key_2(hand: str):
+    card_priority = {x: i for i, x in enumerate("J23456789TQKA")}
+
+    c = Counter(hand)
+    if "J" in c:
+        c[c.most_common(1)[0][0]] += c.pop("J")
+    card_counts = sorted(c.values(), reverse=True)
+
+    hand_priority = [card_priority[card] for card in hand]
+
+    return card_counts, hand_priority
+
+
+def total_winnings(hands, bids, hands_comparison_key):
+    res = sum(
         i * bid
         for i, (_, bid) in enumerate(
             sorted(
@@ -84,9 +48,30 @@ def main():
             1,
         )
     )
+    return res
 
-    print(f"{part_1 = }")
+
+def main():
+    hands, bids = read_input()
+    part_1 = total_winnings(hands, bids, hands_comparison_key_1)
+    part_2 = total_winnings(hands, bids, hands_comparison_key_2)
+
+    print(f"{part_1 = }, {part_2 = }")
 
 
 if __name__ == "__main__":
     main()
+
+    # hands = [
+    #     "32T3K",
+    #     "T55J5",
+    #     "KK677",
+    #     "KTJJT",
+    #     "QQQJA",
+    # ]
+
+    # for hand in hands:
+    #     print(hand)
+    #     print(hands_comparison_key_2(hand))
+    #     print()
+    # print(sorted(hands, key=hands_comparison_key_2))
