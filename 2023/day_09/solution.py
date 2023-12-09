@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from itertools import cycle
 
 
@@ -10,11 +11,12 @@ def diff(seq: list[int]) -> list[int]:
     return [seq[i] - seq[i - 1] for i in range(1, len(seq))]
 
 
-def full_diff(seq: list[int]) -> list[list[int]]:
-    diffs = [seq]
-    while set(diffs[-1]) != {0}:
-        diffs.append(diff(diffs[-1]))
-    return diffs
+def full_diff(seq: list[int]) -> Generator[list[int], None, None]:
+    d = seq
+    yield d
+    while set(d) != {0}:
+        d = diff(d)
+        yield d
 
 
 def predict_future(seq: list[int]) -> int:
