@@ -1,5 +1,7 @@
 import re
+from collections.abc import Callable
 from itertools import cycle
+from math import lcm
 
 
 def read_input(path: str) -> tuple[str, dict[str, tuple[str, str]]]:
@@ -10,7 +12,7 @@ def read_input(path: str) -> tuple[str, dict[str, tuple[str, str]]]:
 
         next(f)
 
-        nodes = {}
+        nodes: dict[str, tuple[str, str]] = {}
         for line in f:
             m = pattern.match(line)
             if not m:
@@ -20,40 +22,47 @@ def read_input(path: str) -> tuple[str, dict[str, tuple[str, str]]]:
     return directions, nodes
 
 
-def num_steps_1(directions: str, nodes: dict[str, tuple[str, str]]) -> int:
+def num_steps(
+    directions: str,
+    nodes: dict[str, tuple[str, str]],
+    is_source_fn: Callable[[str], bool],
+    is_target_fn: Callable[[str], bool],
+) -> int:
+    """source->target1 == target1->target2 holds for the input"""
     assert set(directions) == {"L", "R"}
 
-    current = "AAA"
+    targets = set(filter(is_target_fn, nodes))
+    steps: list[int] = []
 
-    for count, d in enumerate(cycle(directions)):
-        if current == "ZZZ":
-            return count
+    for current in filter(is_source_fn, nodes):
+        for count, d in enumerate(cycle(directions)):
+            if current in targets:
+                steps.append(count)
+                break
+            current = nodes[current][0] if d == "L" else nodes[current][1]
 
-        current = nodes[current][0] if d == "L" else nodes[current][1]
-
-    return -1  # Never happens
-
-
-def num_steps_2(directions: str, nodes: dict[str, tuple[str, str]]) -> int:
-    # Takes forever
-    assert set(directions) == {"L", "R"}
-
-    currents = [node_name for node_name in nodes if node_name.endswith("A")]
-
-    for count, d in enumerate(cycle(directions)):
-        print(currents)
-        if all(current.endswith("Z") for current in currents):
-            return count
-
-        currents = [nodes[cur][0] if d == "L" else nodes[cur][1] for cur in currents]
-
-    return -1  # Never happens
+    return lcm(*steps)
 
 
-def main():
+def main() -> None:
     directions, nodes = read_input("input.txt")
-    num_steps_2(directions, nodes)
 
-    part_1 = num_steps_1(directions, nodes)
+    part_1 = num_steps(
+        directions,
+        nodes,
+        is_source_fn=lambda s: s == "AAA",
+        is_target_fn=lambda s: s == "ZZZ",
+    )
 
-    print(f"{part_1 = }")
+    part_2 = num_steps(
+        directions,
+        nodes,
+        is_source_fn=lambda s: s.endswith("A"),
+        is_target_fn=lambda s: s.endswith("Z"),
+    )
+
+    print(f"{part_1 = }, {part_2 = }")
+
+
+if __name__ == "__main__":
+    main()
