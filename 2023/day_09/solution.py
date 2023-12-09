@@ -1,9 +1,10 @@
 from collections.abc import Generator
 
 
-def read_input(path: str) -> list[list[int]]:
+def read_input(path: str) -> Generator[list[int], None, None]:
     with open(path) as f:
-        return [list(map(int, line.split())) for line in f]
+        for line in f:
+            yield list(map(int, line.split()))
 
 
 def diff(seq: list[int]) -> list[int]:
@@ -27,10 +28,10 @@ def predict_past(seq: list[int]) -> int:
 
 
 def main() -> None:
-    seqs = read_input("input.txt")
+    path = "input.txt"
 
-    part_1 = sum(map(predict_future, seqs))
-    part_2 = sum(map(predict_past, seqs))
+    part_1 = sum(map(predict_future, read_input(path)))
+    part_2 = sum(map(predict_past, read_input(path)))
 
     print(f"{part_1 = } {part_2 = }")
 
