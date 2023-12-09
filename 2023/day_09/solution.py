@@ -33,7 +33,7 @@ def main() -> None:
     part_1 = sum(map(predict_future, read_input(path)))
     part_2 = sum(map(predict_past, read_input(path)))
 
-    print(f"{part_1 = } {part_2 = }")
+    print(f"{part_1 = }, {part_2 = }")
 
 
 if __name__ == "__main__":
