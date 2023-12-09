@@ -1,3 +1,6 @@
+from itertools import cycle
+
+
 def read_input(path: str) -> list[list[int]]:
     with open(path) as f:
         return [list(map(int, line.split())) for line in f]
@@ -14,14 +17,22 @@ def full_diff(seq: list[int]) -> list[list[int]]:
     return diffs
 
 
-def predict(seq: list[int]) -> int:
-    diffs = full_diff(seq)
-    while len(diffs) > 1:
-        x = diffs.pop()[-1]
-        diffs[-1].append(diffs[-1][-1] + x)
-    return diffs[-1][-1]
+def predict_future(seq: list[int]) -> int:
+    return sum(d[-1] for d in full_diff(seq))
 
 
-seqs = read_input("input.txt")
-part_1 = sum(map(predict, seqs))
-print(f"{part_1 = }")
+def predict_past(seq: list[int]) -> int:
+    return sum(sign * d[0] for sign, d in zip(cycle([1, -1]), full_diff(seq)))
+
+
+def main() -> None:
+    seqs = read_input("input.txt")
+
+    part_1 = sum(map(predict_future, seqs))
+    part_2 = sum(map(predict_past, seqs))
+
+    print(f"{part_1 = } {part_2 = }")
+
+
+if __name__ == "__main__":
+    main()
