@@ -1,5 +1,4 @@
 from collections.abc import Generator
-from itertools import cycle
 
 
 def read_input(path: str) -> list[list[int]]:
@@ -24,7 +23,7 @@ def predict_future(seq: list[int]) -> int:
 
 
 def predict_past(seq: list[int]) -> int:
-    return sum(sign * d[0] for sign, d in zip(cycle([1, -1]), full_diff(seq)))
+    return sum(d[0] if i % 2 == 0 else -d[0] for i, d in enumerate(full_diff(seq)))
 
 
 def main() -> None:
