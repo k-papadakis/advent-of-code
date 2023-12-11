@@ -44,7 +44,7 @@ def find_steps_and_area(grid: list[list[str]]) -> tuple[int, int]:
     cursor: tuple[Pair, Pair] = source, initial_direction
 
     length = 0
-    vertice = source
+    vertex = source
     area = 0
 
     while True:
@@ -52,7 +52,7 @@ def find_steps_and_area(grid: list[list[str]]) -> tuple[int, int]:
         pos = old_pos[0] + old_direction[0], old_pos[1] + old_direction[1]
 
         if pos == source:
-            area += vertice[0] * pos[1] - vertice[1] * pos[0]
+            area += vertex[0] * pos[1] - vertex[1] * pos[0]
             break
 
         val = grid[pos[0]][pos[1]]
@@ -60,8 +60,8 @@ def find_steps_and_area(grid: list[list[str]]) -> tuple[int, int]:
         direction = PIPES[val][old_direction]
 
         if old_direction != direction:
-            area += vertice[0] * pos[1] - vertice[1] * pos[0]
-            vertice = pos
+            area += vertex[0] * pos[1] - vertex[1] * pos[0]
+            vertex = pos
 
         cursor = pos, direction
         length += 1
