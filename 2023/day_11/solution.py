@@ -1,4 +1,4 @@
-from itertools import combinations, pairwise
+from itertools import combinations
 
 
 def read_input(path: str) -> list[str]:
@@ -8,37 +8,50 @@ def read_input(path: str) -> list[str]:
     return grid
 
 
-grid = read_input("input.txt")
-m, n = len(grid), len(grid[0])
+def get_coordinates(
+    grid: list[str], expansion_coefficient: int
+) -> list[tuple[int, int]]:
+    m, n = len(grid), len(grid[0])
+    i_map: list[int] = []
+    shift = 0
+    for i in range(m):
+        if all(grid[i][j] == "." for j in range(n)):
+            shift += expansion_coefficient - 1
+        i_map.append(i + shift)
 
-i_map = []
-shift = 0
-for i in range(m):
-    if all(grid[i][j] == "." for j in range(n)):
-        shift += 1
-    i_map.append(i + shift)
-
-j_map = []
-shift = 0
-for j in range(n):
-    if all(grid[i][j] == "." for i in range(m)):
-        shift += 1
-    j_map.append(j + shift)
-
-i_coords, j_coords = [], []
-for i in range(m):
+    j_map: list[int] = []
+    shift = 0
     for j in range(n):
-        if grid[i][j] == "#":
-            i_coords.append(i_map[i])
-            j_coords.append(j_map[j])
-            
-# Up to here it's correct
+        if all(grid[i][j] == "." for i in range(m)):
+            shift += expansion_coefficient - 1
+        j_map.append(j + shift)
+
+    coordinates: list[tuple[int, int]] = []
+    for i in range(m):
+        for j in range(n):
+            if grid[i][j] == "#":
+                coordinates.append((i_map[i], j_map[j]))
+
+    return coordinates
 
 
-# res = sum(k * (b - a) for k, (a, b) in enumerate(pairwise(sorted(i_coords)), 1)) + sum(
-#     k * (b - a) for k, (a, b) in enumerate(pairwise(sorted(j_coords)), 1)
-# )
-# print(res)
+def get_pairwise_distances_sum(coords: list[tuple[int, int]]) -> int:
+    res = sum(
+        abs(i2 - i1) + abs(j2 - j1) for (i1, j1), (i2, j2) in combinations(coords, 2)
+    )
+    return res
 
-res = sum(abs(i2 - i1) + abs(j2 - j1) for (i1, j1), (i2, j2) in combinations(zip(i_coords, j_coords), 2))
-print(res)
+
+def main() -> None:
+    grid = read_input("input.txt")
+
+    part_1 = get_pairwise_distances_sum(get_coordinates(grid, expansion_coefficient=2))
+    part_2 = get_pairwise_distances_sum(
+        get_coordinates(grid, expansion_coefficient=1_000_000)
+    )
+
+    print(f"{part_1 = }, {part_2 = }")
+
+
+if __name__ == "__main__":
+    main()
