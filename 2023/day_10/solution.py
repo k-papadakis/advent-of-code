@@ -28,42 +28,55 @@ def read_input(path: str) -> list[list[str]]:
     return grid
 
 
-def add(u: Pair, v: Pair) -> Pair:
-    return (u[0] + v[0], u[1] + v[1])
-
-
-def find_source(grid: list[list[str]]) -> Pair:
-    m, n = len(grid), len(grid[0])
-    source = next((i, j) for i in range(m) for j in range(n) if grid[i][j] == "S")
-    return source
-
-
-def initialize_cursor(grid: list[list[str]], source: Pair) -> tuple[Pair, Pair]:
-    directions = RIGHT, UP, LEFT, DOWN
-    candidates = (add(source, direction) for direction in directions)
-    cursor = next(
-        ((i, j), PIPES[grid[i][j]][direction])
-        for direction, (i, j) in zip(directions, candidates)
-        if direction in PIPES[grid[i][j]]
+def find_steps_and_area(grid: list[list[str]]) -> tuple[int, int]:
+    source = next(
+        (i, j)
+        for i in range(len(grid))
+        for j in range(len(grid[0]))
+        if grid[i][j] == "S"
     )
-    return cursor
+    initial_direction = next(
+        direction
+        for direction in (RIGHT, UP, LEFT, DOWN)
+        if direction in PIPES[grid[source[0] + direction[0]][source[1] + direction[1]]]
+    )
+
+    cursor: tuple[Pair, Pair] = source, initial_direction
+
+    length = 0
+    vertice = source
+    area = 0
+
+    while True:
+        old_pos, old_direction = cursor
+        pos = old_pos[0] + old_direction[0], old_pos[1] + old_direction[1]
+
+        if pos == source:
+            area += vertice[0] * pos[1] - vertice[1] * pos[0]
+            break
+
+        val = grid[pos[0]][pos[1]]
+
+        direction = PIPES[val][old_direction]
+
+        if old_direction != direction:
+            area += vertice[0] * pos[1] - vertice[1] * pos[0]
+            vertice = pos
+
+        cursor = pos, direction
+        length += 1
+
+    steps = (length + 1) // 2
+    area = (abs(area) - (length - 1)) // 2
+
+    return steps, area
 
 
-grid = read_input("input.txt")
-source = find_source(grid)
-cursor = initialize_cursor(grid, source)
-level = 0
+def main() -> None:
+    grid = read_input("input.txt")
+    part_1, part_2 = find_steps_and_area(grid)
+    print(f"{part_1 = }, {part_2 = }")
 
-while True:
-    level += 1
 
-    old_pos, old_direction = cursor
-    pos = add(old_pos, old_direction)
-    val = grid[pos[0]][pos[1]]
-    if val == "S":
-        break
-    direction = PIPES[val][old_direction]
-
-    cursor = pos, direction
-
-print((level + 1) // 2)
+if __name__ == "__main__":
+    main()
