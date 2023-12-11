@@ -1,4 +1,4 @@
-from itertools import combinations
+from itertools import pairwise
 
 
 def read_input(path: str) -> list[str]:
@@ -10,7 +10,7 @@ def read_input(path: str) -> list[str]:
 
 def get_coordinates(
     grid: list[str], expansion_coefficient: int
-) -> list[tuple[int, int]]:
+) -> tuple[list[int], list[int]]:
     m, n = len(grid), len(grid[0])
     i_map: list[int] = []
     shift = 0
@@ -26,29 +26,35 @@ def get_coordinates(
             shift += expansion_coefficient - 1
         j_map.append(j + shift)
 
-    coordinates: list[tuple[int, int]] = []
+    i_coords: list[int] = []
+    j_coords: list[int] = []
     for i in range(m):
         for j in range(n):
             if grid[i][j] == "#":
-                coordinates.append((i_map[i], j_map[j]))
+                i_coords.append(i_map[i])
+                j_coords.append(j_map[j])
 
-    return coordinates
+    return i_coords, j_coords
 
 
-def get_pairwise_distances_sum(coords: list[tuple[int, int]]) -> int:
+def pairwise_l1_sum_1d(coords: list[int]) -> int:
+    n = len(coords)
     res = sum(
-        abs(i2 - i1) + abs(j2 - j1) for (i1, j1), (i2, j2) in combinations(coords, 2)
+        (t2 - t1) * k * (n - k)
+        for k, (t1, t2) in enumerate(pairwise(sorted(coords)), 1)
     )
     return res
+
+
+def pairwise_l1_sum_2d(i_coords: list[int], j_coords: list[int]) -> int:
+    return pairwise_l1_sum_1d(i_coords) + pairwise_l1_sum_1d(j_coords)
 
 
 def main() -> None:
     grid = read_input("input.txt")
 
-    part_1 = get_pairwise_distances_sum(get_coordinates(grid, expansion_coefficient=2))
-    part_2 = get_pairwise_distances_sum(
-        get_coordinates(grid, expansion_coefficient=1_000_000)
-    )
+    part_1 = pairwise_l1_sum_2d(*get_coordinates(grid, expansion_coefficient=2))
+    part_2 = pairwise_l1_sum_2d(*get_coordinates(grid, expansion_coefficient=1_000_000))
 
     print(f"{part_1 = }, {part_2 = }")
 
