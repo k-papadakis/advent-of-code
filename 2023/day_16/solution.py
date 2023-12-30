@@ -1,5 +1,6 @@
 from collections import defaultdict, deque
 from dataclasses import dataclass
+from typing import Iterator
 
 
 @dataclass(slots=True, frozen=True)
@@ -26,6 +27,9 @@ class Mirror:
 
     def __repr__(self) -> str:
         return self.value
+
+    def __call__(self, p: Pair):
+        return self.reflect[p]
 
 
 type MirrorGrid = list[list[Mirror]]
@@ -98,7 +102,9 @@ def energy(grid: MirrorGrid, beam: Beam) -> int:
             continue
         visited[p].add(d)
 
-        for dd in grid[p.x][p.y].reflect[d]:
+        mirror = grid[p.x][p.y]
+
+        for dd in mirror(d):
             pp = p + dd
             if pp.x in range(m) and pp.y in range(n):
                 beams.append((pp, dd))
@@ -106,8 +112,24 @@ def energy(grid: MirrorGrid, beam: Beam) -> int:
     return len(visited)
 
 
-def main() -> None:
-    grid = read_input("small.txt")
-    part_1 = energy(grid, (Pair(0, 0), right))
+def iter_beams(m: int, n: int) -> Iterator[Beam]:
+    for i in range(m):
+        yield Pair(i, 0), right
+        yield Pair(i, n - 1), left
 
-    print(f"{part_1 = }")
+    for j in range(n):
+        yield Pair(0, j), down
+        yield Pair(m - 1, j), up
+
+
+def main() -> None:
+    grid = read_input("input.txt")
+
+    part_1 = energy(grid, (Pair(0, 0), right))
+    part_2 = max(energy(grid, beam) for beam in iter_beams(len(grid), len(grid[0])))
+
+    print(f"{part_1 = }, {part_2 = }")
+
+
+if __name__ == "__main__":
+    main()
