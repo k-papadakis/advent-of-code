@@ -1,22 +1,40 @@
 import re
+from dataclasses import dataclass
 from itertools import accumulate, pairwise, starmap
-
-ORIGIN = complex(0, 0)
-RIGHT = complex(0, 1)
-UP = complex(-1, 0)
-LEFT = complex(0, -1)
-DOWN = complex(1, 0)
+from typing import Self
 
 
-def read_input(path: str) -> tuple[list[complex], list[complex]]:
+@dataclass(slots=True, frozen=True)
+class Pair:
+    x: int
+    y: int
+
+    def __add__(self, other: Self) -> Self:
+        return type(self)(self.x + other.x, self.y + other.y)
+
+    def __rmul__(self, k: int) -> Self:
+        return type(self)(k * self.x, k * self.y)
+
+    def __abs__(self) -> int:
+        return abs(self.x) + abs(self.y)
+
+
+ORIGIN = Pair(0, 0)
+RIGHT = Pair(0, 1)
+UP = Pair(-1, 0)
+LEFT = Pair(0, -1)
+DOWN = Pair(1, 0)
+
+
+def read_input(path: str) -> tuple[list[Pair], list[Pair]]:
     pattern = re.compile(
         r"(?P<direction>R|U|L|D)\s+(?P<length>\d+)\s+\(#(?P<color>[0-9a-f]+)\)"
     )
     d = {"R": RIGHT, "U": UP, "L": LEFT, "D": DOWN}
     v = [RIGHT, DOWN, LEFT, UP]
 
-    dzs_1: list[complex] = []
-    dzs_2: list[complex] = []
+    steps_1: list[Pair] = []
+    steps_2: list[Pair] = []
 
     with open(path) as f:
         for line in f:
@@ -31,29 +49,29 @@ def read_input(path: str) -> tuple[list[complex], list[complex]]:
             length_2, index = divmod(color, 16)
             direction_2 = v[index]
 
-            dzs_1.append(length_1 * direction_1)
-            dzs_2.append(length_2 * direction_2)
+            steps_1.append(length_1 * direction_1)
+            steps_2.append(length_2 * direction_2)
 
-    return dzs_1, dzs_2
-
-
-def det(z: complex, w: complex) -> float:
-    return z.real * w.imag - z.imag * z.real
+    return steps_1, steps_2
 
 
-def area(dzs: list[complex]) -> float:
-    shoelace = abs(sum(starmap(det, pairwise(accumulate(dzs, initial=ORIGIN)))))
-    length = sum(map(abs, dzs))
-    # TODO: Why does taking shoelace instead of shoelace/2 work?
-    return shoelace + length / 2 + 1
+def det(p: Pair, q: Pair) -> int:
+    return p.x * q.y - p.y * q.x
+
+
+def area(steps: list[Pair]) -> int:
+    shoelace = abs(sum(starmap(det, pairwise(accumulate(steps, initial=ORIGIN)))))
+    num_boundary = sum(map(abs, steps))
+    num_interior = shoelace // 2 - num_boundary // 2 + 1
+    return num_interior + num_boundary
 
 
 def main() -> None:
-    path = "small.txt"
-    dzs_1, dzs_2 = read_input(path)
+    path = "input.txt"
+    steps_1, steps_2 = read_input(path)
 
-    part_1 = area(dzs_1)
-    part_2 = area(dzs_2)
+    part_1 = area(steps_1)
+    part_2 = area(steps_2)
 
     print(f"{part_1 = }, {part_2 = }")
 
