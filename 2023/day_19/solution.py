@@ -1,77 +1,63 @@
+import math
 import re
-from dataclasses import dataclass
+from typing import Iterator, NamedTuple
 
 
-@dataclass(slots=True, frozen=True)
-class Part:
+def safematch[T: (str, bytes)](pattern: re.Pattern[T], s: T) -> re.Match[T]:
+    m = pattern.match(s)
+    if not m:
+        raise ValueError("Could not match pattern.")
+    return m
+
+
+class Part(NamedTuple):
     x: int
     m: int
     a: int
     s: int
 
-    def sum(self) -> int:
-        return self.x + self.m + self.a + self.s
-
 
 MIN = 1
 MAX = 4_000
+DEFAULT = range(MIN, MAX + 1)
 
 
-@dataclass(slots=True, frozen=True)
-class PartRange:
-    x: tuple[int, int] = (MIN, MAX)
-    m: tuple[int, int] = (MIN, MAX)
-    a: tuple[int, int] = (MIN, MAX)
-    s: tuple[int, int] = (MIN, MAX)
+class PartRange(NamedTuple):
+    x: range = DEFAULT
+    m: range = DEFAULT
+    a: range = DEFAULT
+    s: range = DEFAULT
 
-    def __len__(self) -> int:
-        return (
-            (self.x[1] - self.x[0] + 1)
-            * (self.m[1] - self.m[0] + 1)
-            * (self.a[1] - self.a[0] + 1)
-            * (self.s[1] - self.s[0] + 1)
-        )
+    def combinations(self) -> int:
+        return math.prod(map(len, self))
 
-    def __contains__(self, part: Part) -> bool:
-        return (
-            self.x[0] <= part.x <= self.x[1]
-            and self.m[0] <= part.m <= self.m[1]
-            and self.a[0] <= part.a <= self.a[1]
-            and self.s[0] <= part.s <= self.s[1]
-        )
+    def contains(self, part: Part) -> bool:
+        return all(x in r for x, r in zip(part, self))
 
 
 class Workflow:
+    logic_pattern = re.compile(r"(x|m|a|s)(>|<)(\d+):(\w+)")
+
     def __init__(self, name: str, logic_str: str) -> None:
         self.name = name
         self.logic_str = logic_str
-        self.logic: list[tuple[PartRange, str]] = []
+        self.logic = list(self._iter_logic())
 
-        pattern = re.compile(r"(x|m|a|s)(>|<)(\d+):(\w+)")
-        *head, final = self.logic_str.split(",")
+    def _iter_logic(self) -> Iterator[tuple[PartRange, str]]:
+        *head, else_ret = self.logic_str.split(",")
 
         for h in head:
-            m = pattern.match(h)
-            if not m:
-                raise ValueError("Could not match pattern.")
+            m = safematch(self.logic_pattern, h)
+            if_var, op_str, val_str, ret = m.groups()
+            thresh = int(val_str)
 
-            t, op_str, val_str, r = m.groups()
-            val = int(val_str)
+            rn = range(thresh + 1, MAX + 1) if op_str == ">" else range(MIN, thresh)
+            yield PartRange(**{if_var: rn}), ret
 
-            if op_str == ">":
-                rn = PartRange(**{t: (val + 1, MAX)})
-            else:
-                rn = PartRange(**{t: (MIN, val - 1)})
-
-            self.logic.append((rn, r))
-
-        self.logic.append((PartRange(), final))
+        yield PartRange(), else_ret
 
     def process_part(self, part: Part) -> str:
-        for rn, r in self.logic:
-            if part in rn:
-                return r
-        return "error"
+        return next(r for rn, r in self.logic if rn.contains(part))
 
 
 def read_input(path: str) -> tuple[dict[str, Workflow], list[Part]]:
@@ -83,17 +69,13 @@ def read_input(path: str) -> tuple[dict[str, Workflow], list[Part]]:
     workflow_pattern = re.compile(r"(?P<name>.*?)\{(?P<logic>.*?)\}")
     system: dict[str, Workflow] = {}
     for workflow_str in workflows_str.splitlines():
-        m = workflow_pattern.match(workflow_str)
-        if not m:
-            raise ValueError("Could not match pattern.")
+        m = safematch(workflow_pattern, workflow_str)
         system[m["name"]] = Workflow(m["name"], m["logic"])
 
     part_pattern = re.compile(r"\{x=(\d+),m=(\d+),a=(\d+),s=(\d+)\}")
     parts: list[Part] = []
     for part_str in parts_str.splitlines():
-        m = part_pattern.match(part_str)
-        if not m:
-            raise ValueError("Could not match pattern.")
+        m = safematch(part_pattern, part_str)
         parts.append(Part(*map(int, m.groups())))
 
     return system, parts
@@ -111,5 +93,5 @@ def accepts(system: dict[str, Workflow], part: Part) -> bool:
 
 path = "input.txt"
 workflows, parts = read_input(path)
-res = sum(part.sum() for part in parts if accepts(workflows, part))
+res = sum(sum(part) for part in parts if accepts(workflows, part))
 print(res)
