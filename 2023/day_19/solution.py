@@ -1,5 +1,4 @@
 import math
-import operator
 import re
 from dataclasses import dataclass
 from typing import Generator, Iterator, Literal, NamedTuple, Self
@@ -8,11 +7,6 @@ type Xmas = Literal["x", "m", "a", "s"]
 type Op = Literal["<", ">"]
 
 XMAS = {"x": 0, "m": 1, "a": 2, "s": 3}
-OP = {"<": operator.lt, ">": operator.gt}
-
-MIN = 1
-MAX = 4_000
-DEFAULT = range(MIN, MAX + 1)
 
 
 def safematch[T: (str, bytes)](pattern: re.Pattern[T], s: T) -> re.Match[T]:
@@ -65,10 +59,10 @@ def split(rn: range, val: int, op: Op) -> tuple[range, range]:
 
 
 class PartRange(NamedTuple):
-    x: range = DEFAULT
-    m: range = DEFAULT
-    a: range = DEFAULT
-    s: range = DEFAULT
+    x: range
+    m: range
+    a: range
+    s: range
 
     def __len__(self) -> int:
         return math.prod(map(len, self))
@@ -95,6 +89,14 @@ class Condition:
     val: int
     ret: str
 
+    def is_valid(self, x: int) -> bool:
+        if self.op == "<":
+            return x < self.val
+        elif self.op == ">":
+            return x > self.val
+        else:
+            raise ValueError(f"Invalid op: {self.op}")
+
     @classmethod
     def from_string(cls, condition_str: str) -> Self:
         condition_pattern = re.compile(
@@ -113,24 +115,25 @@ class Workflow:
     else_: str
 
     def process_part(self, part: Part) -> str:
-        for c in self.conditions:
-            if OP[c.op](part[XMAS[c.var]], c.val):
-                return c.ret
-        return self.else_
+        return next(
+            (c.ret for c in self.conditions if c.is_valid(part[XMAS[c.var]])),
+            self.else_,
+        )
 
     def process_part_range(
         self, part_range: PartRange, condition_index: int = 0
     ) -> Iterator[tuple[PartRange, str]]:
         if condition_index < len(self.conditions):
-            for c in self.conditions[condition_index:]:
-                accepted, rejected = part_range.split(c.var, c.val, c.op)
-                if accepted:
-                    yield accepted, c.ret
+            c = self.conditions[condition_index]
+            accepted, rejected = part_range.split(c.var, c.val, c.op)
 
-                if rejected:
-                    yield from self.process_part_range(
-                        rejected, condition_index=condition_index + 1
-                    )
+            if accepted:
+                yield accepted, c.ret
+
+            if rejected:
+                yield from self.process_part_range(
+                    rejected, condition_index=condition_index + 1
+                )
         else:
             yield part_range, self.else_
 
@@ -193,24 +196,19 @@ def read_input(path: str) -> tuple[System, list[Part]]:
 
 
 def main():
-    path = "small.txt"
+    path = "input.txt"
 
     system, parts = read_input(path)
 
     part_1 = sum(sum(part) for part in parts if system.accepts_part(part))
-    part_2 = sum(map(len, system.accepted_part_ranges(PartRange())))
+
+    part_range = PartRange(
+        range(1, 4001), range(1, 4001), range(1, 4001), range(1, 4001)
+    )
+    part_2 = sum(map(len, system.accepted_part_ranges(part_range)))
 
     print(f"{part_1 = }, {part_2}")
 
 
 if __name__ == "__main__":
     main()
-
-path = "input.txt"
-system, parts = read_input(path)
-
-# for part_range, name in system["px"].process_part_range(PartRange()):
-#     print(part_range, name)
-
-res = list(system.accepted_part_ranges(PartRange()))
-print(len(res), len(set(res)))
