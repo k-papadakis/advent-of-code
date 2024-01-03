@@ -22,6 +22,18 @@ MAX = 4_000
 DEFAULT = range(MIN, MAX + 1)
 
 
+def split_range(splittee: range, splitter: range) -> tuple[range, range, range]:
+    a, b = splittee.start, splittee.stop - 1
+    c, d = splitter.start, splitter.stop - 1
+
+    s, t = max(a, c), min(b, d)
+
+    if s <= t:
+        return range(a, s), range(s, t + 1), range(t + 1, b + 1)
+    else:
+        return range(a, t + 1), range(0), range(s, b + 1)
+
+
 class PartRange(NamedTuple):
     x: range = DEFAULT
     m: range = DEFAULT
