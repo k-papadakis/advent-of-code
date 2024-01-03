@@ -1,6 +1,8 @@
 import math
+import operator
 import re
-from typing import Iterator, NamedTuple
+from dataclasses import dataclass
+from typing import Literal, NamedTuple, Self
 
 
 def safematch[T: (str, bytes)](pattern: re.Pattern[T], s: T) -> re.Match[T]:
@@ -10,11 +12,21 @@ def safematch[T: (str, bytes)](pattern: re.Pattern[T], s: T) -> re.Match[T]:
     return m
 
 
+xmas = {"x": 0, "m": 1, "a": 2, "s": 3}
+op = {"<": operator.lt, ">": operator.gt}
+
+
 class Part(NamedTuple):
     x: int
     m: int
     a: int
     s: int
+
+    @classmethod
+    def from_string(cls, part_str: str) -> Self:
+        part_pattern = re.compile(r"\{x=(\d+),m=(\d+),a=(\d+),s=(\d+)\}")
+        m = safematch(part_pattern, part_str)
+        return cls(*map(int, m.groups()))
 
 
 MIN = 1
@@ -22,16 +34,21 @@ MAX = 4_000
 DEFAULT = range(MIN, MAX + 1)
 
 
-def split_range(splittee: range, splitter: range) -> tuple[range, range, range]:
-    a, b = splittee.start, splittee.stop - 1
-    c, d = splitter.start, splitter.stop - 1
-
-    s, t = max(a, c), min(b, d)
-
-    if s <= t:
-        return range(a, s), range(s, t + 1), range(t + 1, b + 1)
+def split_lt(rn: range, c: int) -> tuple[range, range]:
+    a, b = rn.start, rn.stop - 1
+    if c < a < b:
+        return range(0), rn
+    elif a <= c <= b:
+        return range(a, c), range(c + 1, b + 1)
+    elif a < b < c:
+        return rn, range(0)
     else:
-        return range(a, t + 1), range(0), range(s, b + 1)
+        raise ValueError(rn, c)
+
+
+def split_gt(rn: range, c: int) -> tuple[range, range]:
+    p, q = split_lt(rn, c - 1)
+    return q, p
 
 
 class PartRange(NamedTuple):
@@ -47,63 +64,79 @@ class PartRange(NamedTuple):
         return all(x in r for x, r in zip(part, self))
 
 
+@dataclass
+class Condition:
+    var: Literal["x", "m", "a", "s"]
+    op: Literal[">", "<"]
+    val: int
+    ret: str
+
+    @classmethod
+    def from_string(cls, condition_str: str) -> Self:
+        condition_pattern = re.compile(
+            r"(?P<var>x|m|a|s)(?P<op><|>)(?P<val>\d+):(?P<ret>\w+)"
+        )
+
+        m = safematch(condition_pattern, condition_str)
+
+        return cls(m["var"], m["op"], int(m["val"]), m["ret"])  # type: ignore
+
+
+@dataclass
 class Workflow:
-    logic_pattern = re.compile(r"(x|m|a|s)(>|<)(\d+):(\w+)")
+    name: str
+    conditions: list[Condition]
+    else_: str
 
-    def __init__(self, name: str, logic_str: str) -> None:
-        self.name = name
-        self.logic_str = logic_str
-        self.logic = list(self._iter_logic())
+    def process(self, part: Part) -> str:
+        for c in self.conditions:
+            if op[c.op](part[xmas[c.var]], c.val):
+                return c.ret
+        return self.else_
 
-    def _iter_logic(self) -> Iterator[tuple[PartRange, str]]:
-        *head, else_ret = self.logic_str.split(",")
+    @classmethod
+    def from_string(cls, workflow_str: str) -> Self:
+        workflow_pattern = re.compile(r"(?P<name>.*?)\{(?P<logic>.*?)\}")
 
-        for h in head:
-            m = safematch(self.logic_pattern, h)
-            if_var, op_str, val_str, ret = m.groups()
-            thresh = int(val_str)
+        m = safematch(workflow_pattern, workflow_str)
+        name = m["name"]
+        *condition_strs, else_ = m["logic"].split(",")
+        conditions = list(map(Condition.from_string, condition_strs))
 
-            rn = range(thresh + 1, MAX + 1) if op_str == ">" else range(MIN, thresh)
-            yield PartRange(**{if_var: rn}), ret
-
-        yield PartRange(), else_ret
-
-    def process_part(self, part: Part) -> str:
-        return next(r for rn, r in self.logic if rn.contains(part))
+        return cls(name, conditions, else_)
 
 
-def read_input(path: str) -> tuple[dict[str, Workflow], list[Part]]:
+class System:
+    __slots__ = ["workflows"]
+
+    def __init__(self, workflows: list[Workflow]) -> None:
+        self.workflows: dict[str, Workflow] = {w.name: w for w in workflows}
+
+    def accepts(self, part: Part) -> bool:
+        name = "in"
+        while True:
+            if name == "A":
+                return True
+            if name == "R":
+                return False
+            name = self.workflows[name].process(part)
+
+
+def read_input(path: str) -> tuple[System, list[Part]]:
     with open(path) as f:
         s = f.read()
 
     workflows_str, parts_str = s.split("\n\n")
 
-    workflow_pattern = re.compile(r"(?P<name>.*?)\{(?P<logic>.*?)\}")
-    system: dict[str, Workflow] = {}
-    for workflow_str in workflows_str.splitlines():
-        m = safematch(workflow_pattern, workflow_str)
-        system[m["name"]] = Workflow(m["name"], m["logic"])
+    workflows = list(map(Workflow.from_string, workflows_str.splitlines()))
+    system = System(workflows)
 
-    part_pattern = re.compile(r"\{x=(\d+),m=(\d+),a=(\d+),s=(\d+)\}")
-    parts: list[Part] = []
-    for part_str in parts_str.splitlines():
-        m = safematch(part_pattern, part_str)
-        parts.append(Part(*map(int, m.groups())))
+    parts = list(map(Part.from_string, parts_str.splitlines()))
 
     return system, parts
 
 
-def accepts(system: dict[str, Workflow], part: Part) -> bool:
-    cur = "in"
-    while True:
-        cur = system[cur].process_part(part)
-        if cur == "R":
-            return False
-        if cur == "A":
-            return True
-
-
 path = "input.txt"
-workflows, parts = read_input(path)
-res = sum(sum(part) for part in parts if accepts(workflows, part))
+system, parts = read_input(path)
+res = sum(sum(part) for part in parts if system.accepts(part))
 print(res)
