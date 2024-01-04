@@ -82,7 +82,7 @@ class PartRange(NamedTuple):
         return accepted_part_range, rejected_part_range
 
 
-@dataclass
+@dataclass(slots=True)
 class Condition:
     var: Xmas
     op: Op
@@ -108,7 +108,7 @@ class Condition:
         return cls(m["var"], m["op"], int(m["val"]), m["ret"])  # type: ignore
 
 
-@dataclass
+@dataclass(slots=True)
 class Workflow:
     name: str
     conditions: list[Condition]
