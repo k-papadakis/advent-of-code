@@ -157,7 +157,7 @@ class Circuit:
         """
         Assumes a very specific `System` structure:
           - The Circuit contains an output named rx.
-          - rx has a single parent, which is a NAND gate.
+          - rx has a single parent, which is a conjunction.
           - The sole common ancestor of the grandparents of rx is the broadcaster.
           - The grandparents of rx send a high (True) pulse at regular intervals of button pushes.
         """
