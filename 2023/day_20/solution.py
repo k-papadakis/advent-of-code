@@ -158,7 +158,7 @@ class Circuit:
         Assumes a very specific `System` structure:
           - The Circuit contains an output named rx.
           - rx has a single parent, which is a NAND gate.
-          - The grandparents of rx are connected only via rx's parent and the broadcaster.
+          - The sole common ancestor of the grandparents of rx is the broadcaster.
           - The grandparents of rx send a high (True) pulse at regular intervals of button pushes.
         """
         system = deepcopy(self)
