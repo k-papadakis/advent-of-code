@@ -34,6 +34,33 @@ def read_input(path: str) -> tuple[Digraph, set[str], set[str]]:
     return digraph, flipflops, conjunctions
 
 
+# def save_digraph_image(
+#     digraph: Digraph, flipflops: set[str], conjunctions: set[str]
+# ) -> None:
+#     import matplotlib.pyplot as plt
+#     import networkx as nx
+
+#     g = nx.DiGraph()
+#     g.add_edges_from(
+#         [(node, target) for node, targets in digraph.items() for target in targets]
+#     )
+
+#     colors = []
+#     for node in g.nodes():
+#         if node in flipflops:
+#             colors.append("yellow")
+#         elif node in conjunctions:
+#             colors.append("red")
+#         elif node == "broadcaster":
+#             colors.append("blue")
+#         else:
+#             colors.append("green")
+
+#     plt.figure(figsize=(12, 12))
+#     nx.draw_spring(g, with_labels=True, node_color=colors)
+#     plt.savefig("graph.png")
+
+
 def reverse_digraph(digraph: Digraph) -> Digraph:
     res: Digraph = defaultdict(set)
 
