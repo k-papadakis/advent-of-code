@@ -19,8 +19,8 @@ def read_input(path: str) -> tuple[Digraph, set[str], set[str], str]:
         lines = f.read().splitlines()
 
     digraph: Digraph = {}
-    not_gates: set[str] = set()
-    nand_gates: set[str] = set()
+    flipflops: set[str] = set()
+    conjunctions: set[str] = set()
 
     for line in lines:
         type_name, targets_str = line.split(" -> ")
@@ -31,22 +31,22 @@ def read_input(path: str) -> tuple[Digraph, set[str], set[str], str]:
 
         elif type_name.startswith("%"):
             name = type_name[1:]
-            not_gates.add(name)
+            flipflops.add(name)
 
         elif type_name.startswith("&"):
             name = type_name[1:]
-            nand_gates.add(name)
+            conjunctions.add(name)
 
         else:
             raise ValueError(type_name)
 
         digraph[name] = set(targets)
 
-    return digraph, not_gates, nand_gates, "broadcaster"
+    return digraph, flipflops, conjunctions, "broadcaster"
 
 
 # def save_digraph_image(
-#     digraph: Digraph, not_gates: set[str], nand_gates: set[str], broadcaster_gate: str
+#     digraph: Digraph, flipflops: set[str], conjunctions: set[str], broadcaster_gate: str
 # ) -> None:
 #     import matplotlib.pyplot as plt
 #     import networkx as nx
@@ -58,9 +58,9 @@ def read_input(path: str) -> tuple[Digraph, set[str], set[str], str]:
 
 #     colors = []
 #     for node in g.nodes():
-#         if node in not_gates:
+#         if node in flipflops:
 #             colors.append("yellow")
-#         elif node in nand_gates:
+#         elif node in conjunctions:
 #             colors.append("red")
 #         elif node == broadcaster_gate:
 #             colors.append("blue")
@@ -86,16 +86,16 @@ class Circuit:
     def __init__(
         self,
         digraph: Digraph,
-        not_gates: set[str],
-        nand_gates: set[str],
+        flipflops: set[str],
+        conjunctions: set[str],
         broadcaster_gate: str,
     ) -> None:
         self.digraph = digraph
         self.reversed_digraph = reversed_digraph(digraph)
-        self.not_gates = {not_gate: False for not_gate in not_gates}
-        self.nand_gates = {
-            nand_gate: dict.fromkeys(self.reversed_digraph[nand_gate], False)
-            for nand_gate in nand_gates
+        self.flipflops = {flipflop: False for flipflop in flipflops}
+        self.conjunctions = {
+            conjunction: dict.fromkeys(self.reversed_digraph[conjunction], False)
+            for conjunction in conjunctions
         }
         self.broadcaster_gate = broadcaster_gate
 
@@ -112,11 +112,11 @@ class Circuit:
         if signal.target == self.broadcaster_gate:
             yield from self.broadcaster_gate_propagate(signal)
 
-        if signal.target in self.not_gates:
-            yield from self.not_gate_propagate(signal)
+        if signal.target in self.flipflops:
+            yield from self.flipflop_propagate(signal)
 
-        if signal.target in self.nand_gates:
-            yield from self.nand_gate_propagate(signal)
+        if signal.target in self.conjunctions:
+            yield from self.conjunction_propagate(signal)
 
     def broadcaster_gate_propagate(self, signal: Signal) -> Iterator[Signal]:
         new_source = signal.target
@@ -125,21 +125,21 @@ class Circuit:
         for new_target in self.digraph[signal.target]:
             yield Signal(new_source, new_target, new_pulse)
 
-    def not_gate_propagate(self, signal: Signal) -> Iterator[Signal]:
+    def flipflop_propagate(self, signal: Signal) -> Iterator[Signal]:
         new_source = signal.target
 
         if not signal.pulse:
-            self.not_gates[signal.target] = not self.not_gates[signal.target]
-            new_pulse = self.not_gates[signal.target]
+            self.flipflops[signal.target] = not self.flipflops[signal.target]
+            new_pulse = self.flipflops[signal.target]
 
             for new_target in self.digraph[signal.target]:
                 yield Signal(new_source, new_target, new_pulse)
 
-    def nand_gate_propagate(self, signal: Signal) -> Iterator[Signal]:
+    def conjunction_propagate(self, signal: Signal) -> Iterator[Signal]:
         new_source = signal.target
 
-        self.nand_gates[signal.target][signal.source] = signal.pulse
-        new_pulse = not all(self.nand_gates[signal.target].values())
+        self.conjunctions[signal.target][signal.source] = signal.pulse
+        new_pulse = not all(self.conjunctions[signal.target].values())
 
         for new_target in self.digraph[signal.target]:
             yield Signal(new_source, new_target, new_pulse)
@@ -189,14 +189,14 @@ class Circuit:
 
 
 def main() -> None:
-    digraph, not_gates, nand_gates, broadcaster_gate = read_input("input.txt")
-    system = Circuit(digraph, not_gates, nand_gates, broadcaster_gate)
+    digraph, flipflops, conjunctions, broadcaster_gate = read_input("input.txt")
+    system = Circuit(digraph, flipflops, conjunctions, broadcaster_gate)
 
     for _ in range(1_000):
         system.push_button()
     part_1 = system.low_pulses * system.high_pulses
 
-    system = Circuit(digraph, not_gates, nand_gates, broadcaster_gate)
+    system = Circuit(digraph, flipflops, conjunctions, broadcaster_gate)
     part_2 = system.min_pushes_low_rx()
 
     print(f"{part_1 = }, {part_2 = }")
