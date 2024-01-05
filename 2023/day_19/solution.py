@@ -49,15 +49,6 @@ def split_gt(rn: range, val: int) -> tuple[range, range]:
     return q, p
 
 
-def split(rn: range, val: int, op: Op) -> tuple[range, range]:
-    if op == "<":
-        return split_lt(rn, val)
-    elif op == ">":
-        return split_gt(rn, val)
-    else:
-        raise ValueError(f"Invalid op {op}")
-
-
 class PartRange(NamedTuple):
     x: range
     m: range
@@ -70,7 +61,12 @@ class PartRange(NamedTuple):
     def split(self, var: Xmas, val: int, op: Op) -> tuple[Self, Self]:
         rn = self[XMAS[var]]
 
-        accepted_range, rejected_range = split(rn, val, op)
+        if op == "<":
+            accepted_range, rejected_range = split_lt(rn, val)
+        elif op == ">":
+            accepted_range, rejected_range = split_gt(rn, val)
+        else:
+            raise ValueError(f"Invalid op {op}")
 
         accepted_part_range = self._replace(**{var: accepted_range})
         rejected_part_range = self._replace(**{var: rejected_range})
