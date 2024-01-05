@@ -1,19 +1,15 @@
-from collections import defaultdict
+from collections import defaultdict, deque
+
+type Digraph = dict[str, set[str]]
 
 
-type Node = str
-type Digraph = dict[Node, set[Node]]
-
-
-def read_input(path: str) -> tuple[Digraph, Digraph, set[Node], set[Node]]:
+def read_input(path: str) -> tuple[Digraph, set[str], set[str]]:
     with open(path) as f:
         lines = f.read().splitlines()
 
-    digraph: Digraph = defaultdict(set)
-    reverse_digraph: Digraph = defaultdict(set)
-
-    flipflops: set[Node] = set()
-    conjunctions: set[Node] = set()
+    digraph: Digraph = {}
+    flipflops: set[str] = set()
+    conjunctions: set[str] = set()
 
     for line in lines:
         type_name, targets_str = line.split(" -> ")
@@ -33,13 +29,92 @@ def read_input(path: str) -> tuple[Digraph, Digraph, set[Node], set[Node]]:
         else:
             raise ValueError(type_name)
 
+        digraph[name] = set(targets)
+
+    return digraph, flipflops, conjunctions
+
+
+def reverse_digraph(digraph: Digraph) -> Digraph:
+    res: Digraph = defaultdict(set)
+
+    for node, targets in digraph.items():
         for target in targets:
-            digraph[name].add(target)
-            reverse_digraph[target].add(name)
+            res[target].add(node)
 
-    digraph["output"]
+    return res
 
-    return dict(digraph), dict(reverse_digraph), flipflops, conjunctions
 
-digraph, reverse_digraph, flipflops, conjunctions = read_input("small_2.txt")
+class System:
+    def __init__(
+        self,
+        digraph: Digraph,
+        flipflops: set[str],
+        conjunctions: set[str],
+    ) -> None:
+        reversed_digraph = reverse_digraph(digraph)
 
+        self.digraph = digraph
+        self.flipflops = {f: False for f in flipflops}
+        self.conjunctions = {
+            c: dict.fromkeys(reversed_digraph[c], False) for c in conjunctions
+        }
+
+        self.low_pulses: int = 0
+        self.high_pulses: int = 0
+
+    def push_button(self) -> None:
+        q: deque[tuple[str, str, bool]] = deque()
+        q.append(("button", "broadcaster", False))
+
+        while q:
+            parent, node, pulse = q.popleft()
+
+            # print(f"{parent} -{'high' if pulse else 'low'}-> {node}")
+
+            self.increment_pulses(pulse)
+
+            if node == "broadcaster":
+                new_pulse = pulse
+
+                for target in self.digraph[node]:
+                    q.append((node, target, new_pulse))
+
+            elif node in self.flipflops:
+                if pulse:
+                    continue
+                self.flipflops[node] = not self.flipflops[node]
+                new_pulse = self.flipflops[node]
+
+                for target in self.digraph[node]:
+                    q.append((node, target, new_pulse))
+
+            elif node in self.conjunctions:
+                self.conjunctions[node][parent] = pulse
+                new_pulse = not all(self.conjunctions[node].values())
+
+                for target in self.digraph[node]:
+                    q.append((node, target, new_pulse))
+
+            else:
+                continue
+
+    def increment_pulses(self, pulse: bool) -> None:
+        if pulse:
+            self.high_pulses += 1
+        else:
+            self.low_pulses += 1
+
+
+def main():
+    digraph, flipflops, conjunctions = read_input("input.txt")
+
+    system = System(digraph, flipflops, conjunctions)
+    for _ in range(1_000):
+        system.push_button()
+    part_1 = system.low_pulses * system.high_pulses
+
+    print(f"{part_1 = }")
+
+
+if __name__ == "__main__":
+    main()
