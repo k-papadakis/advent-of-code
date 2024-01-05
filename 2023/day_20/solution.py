@@ -187,7 +187,7 @@ class Circuit:
         system = deepcopy(self)
 
         (rx_parent,) = system.reversed_digraph["rx"]
-        rx_grandparents = system.reversed_digraph[rx_parent]
+        rx_grandparents = set(system.reversed_digraph[rx_parent])
 
         button_push_periods: dict[str, int] = {}
         button_push_count = 0
