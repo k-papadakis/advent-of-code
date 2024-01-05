@@ -181,6 +181,7 @@ class Circuit:
         Assumes a very specific `System` structure:
           - The Circuit contains an output named rx.
           - rx has a single parent, which is a NAND gate.
+          - The grandparents of rx are not connected to each other.
           - The grandparents of rx receive a low (False) pulse at regular intervals of button pushes.
         """
         system = deepcopy(self)
