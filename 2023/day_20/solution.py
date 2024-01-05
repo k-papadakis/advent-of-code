@@ -159,7 +159,7 @@ class Circuit:
           - The Circuit contains an output named rx.
           - rx has a single parent, which is a NAND gate.
           - The grandparents of rx are connected only via rx's parent and the broadcaster.
-          - The grandparents of rx receive a low (False) pulse at regular intervals of button pushes.
+          - The grandparents of rx send a high (True) pulse at regular intervals of button pushes.
         """
         system = deepcopy(self)
 
@@ -178,9 +178,9 @@ class Circuit:
             while signal_queue:
                 signal = signal_queue.popleft()
 
-                if signal.target in rx_grandparents and not signal.pulse:
-                    rx_grandparents.remove(signal.target)
-                    button_push_periods[signal.target] = button_push_count
+                if signal.source in rx_grandparents and signal.pulse:
+                    rx_grandparents.remove(signal.source)
+                    button_push_periods[signal.source] = button_push_count
                     break
 
                 signal_queue.extend(self.propagate(signal))
