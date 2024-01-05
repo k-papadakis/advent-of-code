@@ -46,7 +46,7 @@ def read_input(path: str) -> tuple[Digraph, set[str], set[str], str]:
 
 
 # def save_digraph_image(
-#     digraph: Digraph, flipflops: set[str], conjunctions: set[str], broadcaster_gate: str
+#     digraph: Digraph, flipflops: set[str], conjunctions: set[str], broadcaster: str
 # ) -> None:
 #     import matplotlib.pyplot as plt
 #     import networkx as nx
@@ -62,7 +62,7 @@ def read_input(path: str) -> tuple[Digraph, set[str], set[str], str]:
 #             colors.append("yellow")
 #         elif node in conjunctions:
 #             colors.append("red")
-#         elif node == broadcaster_gate:
+#         elif node == broadcaster:
 #             colors.append("blue")
 #         else:
 #             colors.append("green")
@@ -88,7 +88,7 @@ class Circuit:
         digraph: Digraph,
         flipflops: set[str],
         conjunctions: set[str],
-        broadcaster_gate: str,
+        broadcaster: str,
     ) -> None:
         self.digraph = digraph
         self.reversed_digraph = reversed_digraph(digraph)
@@ -97,7 +97,7 @@ class Circuit:
             conjunction: dict.fromkeys(self.reversed_digraph[conjunction], False)
             for conjunction in conjunctions
         }
-        self.broadcaster_gate = broadcaster_gate
+        self.broadcaster = broadcaster
 
         self.low_pulses: int = 0
         self.high_pulses: int = 0
@@ -109,8 +109,8 @@ class Circuit:
             self.low_pulses += 1
 
     def propagate(self, signal: Signal) -> Iterator[Signal]:
-        if signal.target == self.broadcaster_gate:
-            yield from self.broadcaster_gate_propagate(signal)
+        if signal.target == self.broadcaster:
+            yield from self.broadcaster_propagate(signal)
 
         if signal.target in self.flipflops:
             yield from self.flipflop_propagate(signal)
@@ -118,7 +118,7 @@ class Circuit:
         if signal.target in self.conjunctions:
             yield from self.conjunction_propagate(signal)
 
-    def broadcaster_gate_propagate(self, signal: Signal) -> Iterator[Signal]:
+    def broadcaster_propagate(self, signal: Signal) -> Iterator[Signal]:
         new_source = signal.target
         new_pulse = signal.pulse
 
@@ -146,7 +146,7 @@ class Circuit:
 
     def push_button(self) -> None:
         signal_queue: deque[Signal] = deque()
-        signal_queue.append(Signal("button", self.broadcaster_gate, False))
+        signal_queue.append(Signal("button", self.broadcaster, False))
 
         while signal_queue:
             signal = signal_queue.popleft()
@@ -173,7 +173,7 @@ class Circuit:
             button_push_count += 1
 
             signal_queue: deque[Signal] = deque()
-            signal_queue.append(Signal("button", self.broadcaster_gate, False))
+            signal_queue.append(Signal("button", self.broadcaster, False))
 
             while signal_queue:
                 signal = signal_queue.popleft()
@@ -189,14 +189,14 @@ class Circuit:
 
 
 def main() -> None:
-    digraph, flipflops, conjunctions, broadcaster_gate = read_input("input.txt")
-    system = Circuit(digraph, flipflops, conjunctions, broadcaster_gate)
+    digraph, flipflops, conjunctions, broadcaster = read_input("input.txt")
+    system = Circuit(digraph, flipflops, conjunctions, broadcaster)
 
     for _ in range(1_000):
         system.push_button()
     part_1 = system.low_pulses * system.high_pulses
 
-    system = Circuit(digraph, flipflops, conjunctions, broadcaster_gate)
+    system = Circuit(digraph, flipflops, conjunctions, broadcaster)
     part_2 = system.min_pushes_low_rx()
 
     print(f"{part_1 = }, {part_2 = }")
