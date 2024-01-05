@@ -102,14 +102,31 @@ class Circuit:
         self.low_pulses: int = 0
         self.high_pulses: int = 0
 
-    def reset(self) -> None:
-        self.not_gates = {not_gate: False for not_gate in self.not_gates}
-        self.nand_gates = {
-            nand_gate: dict.fromkeys(self.reversed_digraph[nand_gate], False)
-            for nand_gate in self.nand_gates
-        }
+    def reset_not_gate(self, not_gate: str) -> None:
+        self.not_gates[not_gate] = False
+
+    def reset_nand_gate(self, nand_gate: str) -> None:
+        for parent in self.nand_gates[nand_gate]:
+            self.nand_gates[nand_gate][parent] = False
+
+    def reset_pulse_count(self) -> None:
         self.low_pulses = 0
         self.high_pulses = 0
+
+    def reset(self) -> None:
+        for not_gate in self.not_gates:
+            self.reset_not_gate(not_gate)
+
+        for nand_gate in self.nand_gates:
+            self.reset_nand_gate(nand_gate)
+
+        self.reset_pulse_count()
+
+    def update_pulse_count(self, pulse: bool) -> None:
+        if pulse:
+            self.high_pulses += 1
+        else:
+            self.low_pulses += 1
 
     def propagate(self, signal: Signal) -> Iterator[Signal]:
         if signal.target == self.broadcaster_gate:
@@ -155,10 +172,7 @@ class Circuit:
         while signal_queue:
             signal = signal_queue.popleft()
 
-            if signal.pulse:
-                self.high_pulses += 1
-            else:
-                self.low_pulses += 1
+            self.update_pulse_count(signal.pulse)
 
             signal_queue.extend(self.propagate(signal))
 
