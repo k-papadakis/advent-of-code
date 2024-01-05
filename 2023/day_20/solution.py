@@ -102,26 +102,6 @@ class Circuit:
         self.low_pulses: int = 0
         self.high_pulses: int = 0
 
-    def reset_not_gate(self, not_gate: str) -> None:
-        self.not_gates[not_gate] = False
-
-    def reset_nand_gate(self, nand_gate: str) -> None:
-        for parent in self.nand_gates[nand_gate]:
-            self.nand_gates[nand_gate][parent] = False
-
-    def reset_pulse_count(self) -> None:
-        self.low_pulses = 0
-        self.high_pulses = 0
-
-    def reset(self) -> None:
-        for not_gate in self.not_gates:
-            self.reset_not_gate(not_gate)
-
-        for nand_gate in self.nand_gates:
-            self.reset_nand_gate(nand_gate)
-
-        self.reset_pulse_count()
-
     def update_pulse_count(self, pulse: bool) -> None:
         if pulse:
             self.high_pulses += 1
@@ -140,7 +120,6 @@ class Circuit:
 
     def buffer_gate_propagate(self, signal: Signal) -> Iterator[Signal]:
         new_source = signal.target
-
         new_pulse = signal.pulse
 
         for new_target in self.digraph[signal.target]:
@@ -171,9 +150,7 @@ class Circuit:
 
         while signal_queue:
             signal = signal_queue.popleft()
-
             self.update_pulse_count(signal.pulse)
-
             signal_queue.extend(self.propagate(signal))
 
     def min_pushes_low_rx(self) -> int:
@@ -219,8 +196,7 @@ def main() -> None:
         system.push_button()
     part_1 = system.low_pulses * system.high_pulses
 
-    system.reset()
-
+    system = Circuit(digraph, not_gates, nand_gates, broadcaster_gate)
     part_2 = system.min_pushes_low_rx()
 
     print(f"{part_1 = }, {part_2 = }")
