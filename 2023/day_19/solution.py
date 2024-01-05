@@ -32,11 +32,11 @@ class Part(NamedTuple):
 def split_lt(rn: range, val: int) -> tuple[range, range]:
     a, b = rn.start, rn.stop - 1
 
-    if val < a < b:
+    if val < a <= b:
         accepted, rejected = range(0), rn
     elif a <= val <= b:
         accepted, rejected = range(a, val), range(val, b + 1)
-    elif a < b < val:
+    elif a <= b < val:
         accepted, rejected = rn, range(0)
     else:
         raise ValueError(a, b, val)
