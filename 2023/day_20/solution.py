@@ -165,6 +165,7 @@ class Circuit:
     def min_pushes_low_rx(self) -> int:
         """
         Assumes a very specific `System` structure:
+          - The Circuit contains an output named rx.
           - rx has a single parent, which is a NAND gate.
           - The grandparents of rx receive a low (False) pulse at regular intervals of button pushes.
         """
