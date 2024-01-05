@@ -110,7 +110,7 @@ class Circuit:
 
     def propagate(self, signal: Signal) -> Iterator[Signal]:
         if signal.target == self.broadcaster_gate:
-            yield from self.buffer_gate_propagate(signal)
+            yield from self.broadcaster_gate_propagate(signal)
 
         if signal.target in self.not_gates:
             yield from self.not_gate_propagate(signal)
@@ -118,7 +118,7 @@ class Circuit:
         if signal.target in self.nand_gates:
             yield from self.nand_gate_propagate(signal)
 
-    def buffer_gate_propagate(self, signal: Signal) -> Iterator[Signal]:
+    def broadcaster_gate_propagate(self, signal: Signal) -> Iterator[Signal]:
         new_source = signal.target
         new_pulse = signal.pulse
 
@@ -158,7 +158,7 @@ class Circuit:
         Assumes a very specific `System` structure:
           - The Circuit contains an output named rx.
           - rx has a single parent, which is a NAND gate.
-          - The grandparents of rx are connected only via rx's parent and the broadcaster
+          - The grandparents of rx are connected only via rx's parent and the broadcaster.
           - The grandparents of rx receive a low (False) pulse at regular intervals of button pushes.
         """
         system = deepcopy(self)
