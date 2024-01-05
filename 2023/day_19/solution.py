@@ -64,20 +64,16 @@ class PartRange(NamedTuple):
     a: range
     s: range
 
-    def __len__(self) -> int:
+    def size(self) -> int:
         return math.prod(map(len, self))
-
-    def replace(self, changes: dict[Xmas, range]) -> Self:
-        kwargs = self._asdict() | changes
-        return type(self)(**kwargs)
 
     def split(self, var: Xmas, val: int, op: Op) -> tuple[Self, Self]:
         rn = self[XMAS[var]]
 
         accepted_range, rejected_range = split(rn, val, op)
 
-        accepted_part_range = self.replace({var: accepted_range})
-        rejected_part_range = self.replace({var: rejected_range})
+        accepted_part_range = self._replace(**{var: accepted_range})
+        rejected_part_range = self._replace(**{var: rejected_range})
 
         return accepted_part_range, rejected_part_range
 
@@ -150,8 +146,6 @@ class Workflow:
 
 
 class System:
-    __slots__ = ["workflows"]
-
     def __init__(self, workflows: list[Workflow]) -> None:
         self.workflows: dict[str, Workflow] = {w.name: w for w in workflows}
 
@@ -205,7 +199,9 @@ def main():
     part_range = PartRange(
         range(1, 4001), range(1, 4001), range(1, 4001), range(1, 4001)
     )
-    part_2 = sum(map(len, system.accepted_part_ranges(part_range)))
+    part_2 = sum(
+        part_range.size() for part_range in system.accepted_part_ranges(part_range)
+    )
 
     print(f"{part_1 = }, {part_2}")
 
