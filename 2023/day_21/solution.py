@@ -1,4 +1,4 @@
-from typing import Iterable, Sequence
+from typing import Any, Sequence
 
 type Grid[T] = Sequence[Sequence[T]]
 type Pair = tuple[int, int]
@@ -37,51 +37,48 @@ def find_reachable(
     return find_reachable(grid, next_positions, max_steps, _steps + 1)
 
 
-def reachable_str(grid: Grid[str], reachable: Iterable[Pair]) -> str:
-    s = "\n".join(
-        "".join("O" if (i, j) in reachable else grid[i][j] for j in range(len(grid[0])))
-        for i in range(len(grid))
-    )
-    return s
+def find_num_reachable(grid: Grid[Any], source: Pair, steps: int) -> int:
+    # assert no obstacles between sources
+    assert len(grid) == len(grid[0])
+    assert len(grid) % 2 == 1
+    assert source == (len(grid) // 2, len(grid) // 2)
+    source_steps, local_steps = divmod(steps, len(grid))
+    assert local_steps == len(grid) // 2
 
+    if source_steps % 2 == 0:
+        # 4*quadrant - 4*diagonal - 3*center
+        # = 4sum(2i-1 for i in 1..m) - 4m - 3
+        # = 4m^2 - 4m - 3, where m = source_steps//2
+        # because the center has been counted 4 times by the quadrants
+        # and each diagonal has been counted twice.
+        m = source_steps // 2
+        reachable_sources = 4 * m**2 - 4 * m - 3
+    else:
+        # 4*quadrant - 4 diagonal
+        # = 4sum(2i for i in 1..m) - 4m
+        # = 4m(m+1) - 4m
+        # = 4m**2, where m = source_steps//2 + 1
+        m = source_steps // 2 + 1
+        reachable_sources = 4 * m**2
 
-def tile_grid[
-    T
-](grid: Grid[T], source: Pair, nrows: int, ncols: int) -> tuple[Grid[T], Pair]:
-    lst = list(map(list, grid))
-    tiled = [row * ncols for row in lst] * nrows
-    tiled = list(map(list, tiled))
-    central_source = (
-        source[0] + len(grid) * (ncols - 1) // 2,
-        source[1] + len(grid[0]) * (nrows - 1) // 2,
+    local_reachable = len(
+        find_reachable(grid, positions={source}, max_steps=local_steps)
     )
-    return tiled, central_source
+
+    global_reachable = reachable_sources * local_reachable
+
+    return global_reachable
 
 
 def main() -> None:
-    grid, source = read_input("./day_21/input.txt")
+    grid, source = read_input("./2023/day_21/input.txt")
 
     part_1 = len(find_reachable(grid, {source}, 64))
 
-    print(f"{part_1 = }")
+    part_2 = find_num_reachable(grid, source, 26501365)
+
+    print(f"{part_1 = }, {part_2 = }")
 
 
-# if __name__ == "__main__":
-#     main()
-
-grid, source = read_input("./day_21/input.txt")
-# Replicate the grid once in each direction
-tiled_grid, central_source = tile_grid(grid, source, 3, 3)
-
-# Move exactly 65 steps to reach the end of the grid
-# Move exactly 131 steps to reach a source again
-for steps in 65, 131:
-    with open(f"./day_21/reachable_{steps}.txt", "w") as f:
-        f.write(
-            reachable_str(
-                tiled_grid, find_reachable(tiled_grid, {central_source}, steps)
-            )
-        )
-
-source_jumps, steps = divmod(26501365, 135)
-print(source_jumps, steps)
+if __name__ == "__main__":
+    main()
