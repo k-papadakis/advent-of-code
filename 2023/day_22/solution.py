@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from functools import cache
 from itertools import groupby, pairwise, product
-from pprint import pprint
 from typing import Self
 
 type Graph[T] = dict[T, set[T]]
@@ -30,7 +29,10 @@ class Brick:
         )
 
     def __repr__(self) -> str:
-        return f"{self.x.min},{self.y.min},{self.z.min}~{self.x.max},{self.y.max},{self.z.max}"
+        return (
+            f"{self.x.min},{self.y.min},{self.z.min}"
+            f"~{self.x.max},{self.y.max},{self.z.max}"
+        )
 
     @classmethod
     def from_string(cls, brick_str: str) -> Self:
@@ -50,18 +52,16 @@ def fall_bricks(bricks: list[Brick]) -> list[Brick]:
     @cache
     def fall_brick(brick: Brick) -> Brick:
         if not supporters[brick]:
-            return Brick(brick.x, brick.y, Range(1, 1))
-
-        z_min = 1 + max(
-            supporter.z.max for supporter in map(fall_brick, supporters[brick])
-        )
+            z_min = 1
+        else:
+            z_min = 1 + max(
+                supporter.z.max for supporter in map(fall_brick, supporters[brick])
+            )
         z_max = z_min + (brick.z.max - brick.z.min)
 
         return Brick(brick.x, brick.y, Range(z_min, z_max))
 
-    fallen = list(map(fall_brick, bricks))
-
-    return fallen
+    return list(map(fall_brick, bricks))
 
 
 def find_supporters_supportees(
@@ -91,10 +91,7 @@ def read_input(path: str) -> list[Brick]:
 
 def main():
     unfallen_bricks = read_input("./2023/day_22/input.txt")
-    # graph = BricksGraph(bricks)
-
     fallen_bricks = fall_bricks(unfallen_bricks)
-
     supporters, supportees = find_supporters_supportees(fallen_bricks)
 
     part_1 = sum(
