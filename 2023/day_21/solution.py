@@ -1,4 +1,7 @@
-from typing import Any, Sequence
+# Props to https://github.com/villuna/aoc23/wiki/A-Geometric-solution-to-advent-of-code-2023,-day-21
+
+from collections import deque
+from typing import Sequence
 
 type Grid[T] = Sequence[Sequence[T]]
 type Pair = tuple[int, int]
@@ -19,63 +22,51 @@ def read_input(path: str) -> tuple[Grid[str], Pair]:
     return grid, source
 
 
-def find_reachable(
-    grid: Grid[str], positions: set[Pair], max_steps: int, _steps: int = 0
-) -> set[Pair]:
-    if _steps == max_steps or not positions:
-        return positions
+def distances(grid: Grid[str], source: Pair) -> dict[Pair, int]:
+    m, n = len(grid), len(grid[0])
 
-    next_positions = {
-        (x + dx, y + dy)
-        for x, y in positions
-        for dx, dy in ((0, 1), (-1, 0), (0, -1), (1, 0))
-        if 0 <= x + dx < len(grid)
-        and 0 <= y + dy < len(grid[0])
-        and grid[x + dx][y + dy] != "#"
-    }
+    dists: dict[Pair, int] = {}
+    q: deque[tuple[Pair, int]] = deque([(source, 0)])
 
-    return find_reachable(grid, next_positions, max_steps, _steps + 1)
+    while q:
+        (x, y), level = q.popleft()
 
+        if (x, y) in dists:
+            continue
+        dists[x, y] = level
 
-def find_num_reachable(grid: Grid[Any], source: Pair, steps: int) -> int:
-    # assert no obstacles between sources
-    assert len(grid) == len(grid[0])
-    assert len(grid) % 2 == 1
-    assert source == (len(grid) // 2, len(grid) // 2)
-    source_steps, local_steps = divmod(steps, len(grid))
-    assert local_steps == len(grid) // 2
+        for dx, dy in (0, 1), (-1, 0), (0, -1), (1, 0):
+            xx, yy = x + dx, y + dy
+            if 0 <= xx < m and 0 <= yy < n and grid[xx][yy] != "#":
+                q.append(((xx, yy), level + 1))
 
-    if source_steps % 2 == 0:
-        # 4*quadrant - 4*diagonal - 3*center
-        # = 4sum(2i-1 for i in 1..m) - 4m - 3
-        # = 4m^2 - 4m - 3, where m = source_steps//2
-        # because the center has been counted 4 times by the quadrants
-        # and each diagonal has been counted twice.
-        m = source_steps // 2
-        reachable_sources = 4 * m**2 - 4 * m - 3
-    else:
-        # 4*quadrant - 4 diagonal
-        # = 4sum(2i for i in 1..m) - 4m
-        # = 4m(m+1) - 4m
-        # = 4m**2, where m = source_steps//2 + 1
-        m = source_steps // 2 + 1
-        reachable_sources = 4 * m**2
-
-    local_reachable = len(
-        find_reachable(grid, positions={source}, max_steps=local_steps)
-    )
-
-    global_reachable = reachable_sources * local_reachable
-
-    return global_reachable
+    return dists
 
 
 def main() -> None:
     grid, source = read_input("./2023/day_21/input.txt")
 
-    part_1 = len(find_reachable(grid, {source}, 64))
+    dists = distances(grid, source)
+    part_1 = sum(1 for d in dists.values() if d <= 64 and d % 2 == 64 % 2)
 
-    part_2 = find_num_reachable(grid, source, 26501365)
+    source_steps, steps = divmod(26501365, 131)
+    assert source_steps % 2 == 0 and steps == 65
+
+    even_sources = source_steps**2
+    odd_sources = (source_steps + 1) ** 2
+
+    reachables_even = sum(1 for d in dists.values() if d % 2 == 0)
+    reachables_odd = sum(1 for d in dists.values() if d % 2 == 1)
+
+    even_corners = sum(1 for d in dists.values() if d > 65 and d % 2 == 0)
+    odd_corners = sum(1 for d in dists.values() if d > 65 and d % 2 == 1)
+
+    part_2 = (
+        even_sources * reachables_even
+        + odd_sources * reachables_odd
+        - (source_steps + 1) * odd_corners
+        + source_steps * even_corners
+    )
 
     print(f"{part_1 = }, {part_2 = }")
 
