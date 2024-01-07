@@ -41,26 +41,6 @@ class Brick:
         return brick
 
 
-def find_supporters_supportees(
-    bricks: list[Brick],
-) -> tuple[Graph[Brick], Graph[Brick]]:
-    supporters: Graph[Brick] = {brick: set() for brick in bricks}
-    supportees: Graph[Brick] = {brick: set() for brick in bricks}
-
-    bricks = sorted(bricks, key=lambda brick: brick.z.min)
-
-    grouped = [
-        list(group) for _, group in groupby(bricks, key=lambda brick: brick.z.min)
-    ]
-    for g1, g2 in pairwise(grouped):
-        for a, b in product(g1, g2):
-            if a.supports(b):
-                supporters[b].add(a)
-                supportees[a].add(b)
-
-    return supporters, supportees
-
-
 def fall_bricks(bricks: list[Brick]) -> list[Brick]:
     supporters: Graph[Brick] = {brick: set() for brick in bricks}
     for a, b in product(bricks, repeat=2):
@@ -84,20 +64,45 @@ def fall_bricks(bricks: list[Brick]) -> list[Brick]:
     return fallen
 
 
+def find_supporters_supportees(
+    bricks: list[Brick],
+) -> tuple[Graph[Brick], Graph[Brick]]:
+    supporters: Graph[Brick] = {brick: set() for brick in bricks}
+    supportees: Graph[Brick] = {brick: set() for brick in bricks}
+
+    bricks = sorted(bricks, key=lambda brick: brick.z.min)
+
+    grouped = [
+        list(group) for _, group in groupby(bricks, key=lambda brick: brick.z.min)
+    ]
+    for g1, g2 in pairwise(grouped):
+        for a, b in product(g1, g2):
+            if a.supports(b):
+                supporters[b].add(a)
+                supportees[a].add(b)
+
+    return supporters, supportees
+
+
 def read_input(path: str) -> list[Brick]:
     with open(path) as f:
         return list(map(Brick.from_string, f))
 
 
 def main():
-    bricks = read_input("./2023/day_22/small.txt")
+    unfallen_bricks = read_input("./2023/day_22/input.txt")
     # graph = BricksGraph(bricks)
 
-    fallen = fall_bricks(bricks)
+    fallen_bricks = fall_bricks(unfallen_bricks)
 
-    supporters, supportees = find_supporters_supportees(fallen)
+    supporters, supportees = find_supporters_supportees(fallen_bricks)
 
-    pprint(supportees)
+    part_1 = sum(
+        all(len(supporters[supportee]) > 1 for supportee in supportees[brick])
+        for brick in fallen_bricks
+    )
+
+    print(f"{part_1 = }")
 
 
 if __name__ == "__main__":
