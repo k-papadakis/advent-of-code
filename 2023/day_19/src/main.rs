@@ -1,44 +1,98 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-//TODO: Optimize parsing. Build regexes once.
-
 use regex::Regex;
-use std::{
-    collections::HashMap,
-    env,
-    fs::File,
-    io::{BufRead, BufReader},
-    ops::Range,
-    str::FromStr,
-};
+use std::{collections::HashMap, env, fs, ops::Range};
 
 fn main() {
     let mut args = env::args();
-    let file_path: String = args.nth(1).unwrap();
-    let (system, parts) = read_input(&file_path);
-    println!("{:?}", &parts[0])
+    let file_path: String = args.nth(1).expect("File path is required.");
+    let (workflows, parts) = read_input(&file_path);
 }
 
-fn read_input(file_path: &str) -> (System, Vec<Part>) {
-    let file = File::open(file_path).unwrap();
-    let reader = BufReader::new(file);
-    let mut lines = reader.lines();
+fn read_input(file_path: &str) -> (Workflows, Vec<Part>) {
+    let data = fs::read_to_string(file_path).expect("Should be able to read from `file_path`.");
+    let (workflows, parts) = data
+        .split_once("\n\n")
+        .expect("Workflows should be followed by an empty line, followed by Parts");
 
-    lines.next();
+    (parse_workflows(workflows), parse_parts(parts))
+}
 
-    let workflows = lines
-        .by_ref()
-        .take_while(|line| line.as_ref().unwrap() != "")
-        .map(|s| Workflow::from_str(&s.unwrap()))
-        .collect::<Result<Vec<Workflow>, _>>()
-        .unwrap();
+fn parse_workflows(workflows: &str) -> Workflows {
+    let workflow_re = Regex::new(r"(?m)^(?<name>.*?)\{(?<logic>.*?)\}")
+        .expect("Hardcoded regex should always be valid.");
+    let condition_re = Regex::new(r"(?m)^(?<var>x|m|a|s)(?<op><|>)(?<val>\d+):(?<ret>\w+)")
+        .expect("Hardcoded regex should always be valid.");
 
-    let parts: Vec<_> = lines
-        .map(|s| Part::from_str(&s.unwrap()).unwrap())
-        .collect();
+    Workflows(
+        workflow_re
+            .captures_iter(workflows)
+            .map(|cap| {
+                let [name, logic] = cap.extract().1;
+                let mut conditions: Vec<_> = logic.split(',').collect();
+                let else_ = conditions
+                    .pop()
+                    .expect("A condition should always contain an `else`.");
 
-    (System::from(workflows), parts)
+                let conditions: Vec<_> = conditions
+                    .into_iter()
+                    .map(|condition| {
+                        let caps = condition_re
+                            .captures(condition)
+                            .expect("Conditions should always be valid.");
+                        let [var, op, val, ret] = caps.extract().1;
+
+                        let var = match var {
+                            "x" => Xmas::X,
+                            "m" => Xmas::M,
+                            "a" => Xmas::A,
+                            "s" => Xmas::S,
+                            _ => panic!("Var should be in x, m, a, s."),
+                        };
+
+                        let op: Op = match op {
+                            "<" => Op::Lt,
+                            ">" => Op::Gt,
+                            _ => panic!("Op should be in >, <."),
+                        };
+
+                        let val = val.parse::<u16>().expect("Val should be u16-parseable");
+
+                        let ret = ret.to_owned();
+
+                        Condition { op, var, val, ret }
+                    })
+                    .collect();
+
+                let name = name.to_owned();
+
+                (
+                    name,
+                    Workflow {
+                        conditions,
+                        else_: else_.to_owned(),
+                    },
+                )
+            })
+            .collect(),
+    )
+}
+
+fn parse_parts(parts: &str) -> Vec<Part> {
+    let part_re = Regex::new(r"(?m)^\{x=(\d+),m=(\d+),a=(\d+),s=(\d+)\}")
+        .expect("Hardcoded regex should always be valid.");
+
+    part_re
+        .captures_iter(parts)
+        .map(|cap| {
+            let [x, m, a, s] = cap.extract().1.map(|t| {
+                t.parse::<u16>()
+                    .expect("Part value should be u16-parseable")
+            });
+            Part { x, m, a, s }
+        })
+        .collect()
 }
 
 #[derive(Debug)]
@@ -79,106 +133,11 @@ struct Condition {
     ret: String,
 }
 
+#[derive(Debug)]
 struct Workflow {
-    name: String,
     conditions: Vec<Condition>,
     else_: String,
 }
 
-struct System(HashMap<String, Workflow>);
-
-impl From<Vec<Workflow>> for System {
-    fn from(workflows: Vec<Workflow>) -> Self {
-        System(
-            workflows
-                .into_iter()
-                .map(|w| (w.name.clone(), w))
-                .collect::<HashMap<_, _>>(),
-        )
-    }
-}
-
-// Input Parsing
-
-// enum ParseInputError {
-//     RegexError(regex::Error),
-//     NoMatch,
-//     ParseInt(ParseIntError),
-//     InvalidOp,
-//     InvalidXmas,
-// }
-
-impl FromStr for Part {
-    type Err = regex::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let re = Regex::new(r"^\{x=(\d+),m=(\d+),a=(\d+),s=(\d+)\}")?;
-        let caps = re.captures(s).unwrap();
-        let [x, m, a, s] = caps.extract().1.map(|t| t.parse::<u16>().unwrap());
-
-        Ok(Part { x, m, a, s })
-    }
-}
-
-impl FromStr for Op {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "<" => Ok(Op::Lt),
-            ">" => Ok(Op::Gt),
-            _ => Err(String::from("Invalid op-string")),
-        }
-    }
-}
-
-impl FromStr for Xmas {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "x" => Ok(Xmas::X),
-            "m" => Ok(Xmas::M),
-            "a" => Ok(Xmas::A),
-            "s" => Ok(Xmas::S),
-            _ => Err(String::from("Invalid xmas")),
-        }
-    }
-}
-
-impl FromStr for Condition {
-    type Err = regex::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let re = Regex::new(r"(?<var>x|m|a|s)(?<op><|>)(?<val>\d+):(?<ret>\w+)")?;
-        let caps = re.captures(s).unwrap();
-        let [var, op, val, ret] = caps.extract().1;
-
-        Ok(Condition {
-            var: Xmas::from_str(var).unwrap(),
-            op: Op::from_str(op).unwrap(),
-            val: val.parse::<u16>().unwrap(),
-            ret: ret.into(),
-        })
-    }
-}
-impl FromStr for Workflow {
-    type Err = regex::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let re = Regex::new(r"(?<name>.*?)\{(?<logic>.*?)\}").unwrap();
-        let caps = re.captures(s).unwrap();
-        let [name, logic] = caps.extract().1;
-        let mut logic: Vec<_> = logic.split(',').collect();
-        let else_ = logic.pop().unwrap();
-        let conditions: Vec<Condition> = logic
-            .into_iter()
-            .map(Condition::from_str)
-            .collect::<Result<Vec<Condition>, _>>()?;
-        Ok(Workflow {
-            name: name.into(),
-            conditions,
-            else_: else_.into(),
-        })
-    }
-}
+#[derive(Debug)]
+struct Workflows(HashMap<String, Workflow>);
