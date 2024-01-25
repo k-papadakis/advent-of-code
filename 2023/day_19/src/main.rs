@@ -9,13 +9,39 @@ fn main() {
     let file_path: String = args.nth(1).expect("File path is required.");
     let (workflows, parts) = read_input(&file_path);
 
-    let part_1: isize = parts
-        .iter()
-        .filter(|part| workflows.accepts_part(part))
+    let part_1: usize = parts
+        .into_iter()
+        .filter(|&part| workflows.accepts_part(part))
         .map(|part| part.sum())
         .sum();
 
-    println!("{}", part_1);
+    let part_range = PartRange {
+        x: ClosedInterval::new(1, 4_000),
+        m: ClosedInterval::new(1, 4_000),
+        a: ClosedInterval::new(1, 4_000),
+        s: ClosedInterval::new(1, 4_000),
+    };
+
+    let part_2: usize = workflows
+        .accepted_part_ranges(part_range)
+        .into_iter()
+        .map(|pr| pr.size())
+        .sum();
+
+    println!("part_1 = {part_1}, part_2 = {part_2}");
+
+    // workflows
+    //     .accepted_part_ranges(part_range)
+    //     .iter()
+    //     .for_each(|pr| println!("{:?}", pr))
+
+    workflows
+        .0
+        .get("cnm")
+        .unwrap()
+        .process_part_range(part_range)
+        .into_iter()
+        .for_each(|(pr, name)| println!("{} {:?}", name, pr))
 }
 
 type Rating = u16;
@@ -29,7 +55,7 @@ struct Part {
 }
 
 impl Part {
-    fn get(&self, var: &Xmas) -> Rating {
+    fn get(self, var: &Xmas) -> Rating {
         match var {
             Xmas::X => self.x,
             Xmas::M => self.m,
@@ -38,8 +64,8 @@ impl Part {
         }
     }
 
-    fn sum(&self) -> isize {
-        self.x as isize + self.m as isize + self.a as isize + self.s as isize
+    fn sum(self) -> usize {
+        self.x as usize + self.m as usize + self.a as usize + self.s as usize
     }
 }
 
@@ -57,47 +83,38 @@ enum Xmas {
     S,
 }
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone)]
 struct ClosedInterval {
     start: Rating,
     stop: Rating,
 }
 
 impl ClosedInterval {
-    fn is_empty(&self) -> bool {
-        self.start > self.stop
-    }
-
-    fn size(&self) -> usize {
-        if self.is_empty() {
-            0
-        } else {
-            (self.stop - self.start + 1) as usize
+    fn new(start: Rating, stop: Rating) -> Self {
+        if start > stop {
+            panic!("`start` should be <= `stop`");
         }
+        Self { start, stop }
     }
 
-    fn split_lt(self, x: Rating) -> (Self, Self) {
-        if self.is_empty() {
-            (self, Self::default())
-        } else if x < self.start {
-            (Self::default(), self)
+    fn size(self) -> usize {
+        (self.stop - self.start + 1) as usize
+    }
+
+    fn split_lt(self, x: Rating) -> (Option<Self>, Option<Self>) {
+        if x <= self.start {
+            (None, Some(self))
         } else if self.stop < x {
-            (self, Self::default())
+            (Some(self), None)
         } else {
             (
-                Self {
-                    start: self.start,
-                    stop: x - 1,
-                },
-                Self {
-                    start: x,
-                    stop: self.stop,
-                },
+                Some(Self::new(self.start, x - 1)),
+                Some(Self::new(x, self.stop)),
             )
         }
     }
 
-    fn split_gt(self, x: Rating) -> (Self, Self) {
+    fn split_gt(self, x: Rating) -> (Option<Self>, Option<Self>) {
         let (p, q) = self.split_lt(x + 1);
         (q, p)
     }
@@ -112,7 +129,7 @@ struct PartRange {
 }
 
 impl PartRange {
-    fn size(&self) -> usize {
+    fn size(self) -> usize {
         self.x.size() * self.m.size() * self.a.size() * self.s.size()
     }
 
@@ -134,7 +151,7 @@ impl PartRange {
         }
     }
 
-    fn split(self, condition: &Condition) -> (Self, Self) {
+    fn split(self, condition: &Condition) -> (Option<Self>, Option<Self>) {
         let iv = self.get(&condition.var);
 
         let (acc_iv, rej_iv) = match condition.op {
@@ -142,10 +159,10 @@ impl PartRange {
             Op::Gt => iv.split_gt(condition.val),
         };
 
-        let acc = self.replace(&condition.var, acc_iv);
-        let rej = self.replace(&condition.var, rej_iv);
+        let acc_pr = acc_iv.map(|acc_iv| self.replace(&condition.var, acc_iv));
+        let rej_pr = acc_iv.map(|rej_iv| self.replace(&condition.var, rej_iv));
 
-        (acc, rej)
+        (acc_pr, rej_pr)
     }
 }
 
@@ -173,7 +190,7 @@ struct Workflow {
 }
 
 impl Workflow {
-    fn process_part(&self, part: &Part) -> &str {
+    fn process_part(&self, part: Part) -> &str {
         self.conditions
             .iter()
             .filter(|cond| cond.satisfied_by(part.get(&cond.var)))
@@ -181,27 +198,68 @@ impl Workflow {
             .next()
             .unwrap_or(&self.otherwise)
     }
+
+    fn process_part_range(&self, part_range: PartRange) -> Vec<(PartRange, &str)> {
+        let mut pending = vec![(part_range, 0_usize)];
+        let mut results: Vec<(PartRange, &str)> = Vec::new();
+
+        while let Some((pr, i)) = pending.pop() {
+            if i < self.conditions.len() {
+                let condition = &self.conditions[i];
+                let (accepted, rejected) = pr.split(condition);
+
+                if let Some(accepted) = accepted {
+                    results.push((accepted, &condition.ret));
+                }
+
+                if let Some(rejected) = rejected {
+                    pending.push((rejected, i + 1))
+                }
+            } else {
+                results.push((pr, &self.otherwise));
+            }
+        }
+        results
+    }
 }
 
 #[derive(Debug)]
 struct Workflows(HashMap<String, Workflow>);
 
 impl Workflows {
-    fn accepts_part(&self, part: &Part) -> bool {
+    fn accepts_part(&self, part: Part) -> bool {
         let mut name = "in";
 
         loop {
-            if name == "A" {
-                return true;
+            name = match name {
+                "A" | "R" => return name == "A",
+                _ => self
+                    .0
+                    .get(name)
+                    .expect("There should be a workflow with this name.")
+                    .process_part(part),
             }
-            if name == "R" {
-                return false;
+        }
+    }
+
+    fn accepted_part_ranges(&self, part_range: PartRange) -> Vec<PartRange> {
+        let mut res = Vec::new();
+        let mut stack = vec![(part_range, "in")];
+
+        loop {
+            match stack.pop() {
+                None => return res,
+                Some((pr, "A")) => res.push(pr),
+                Some((_, "R")) => continue,
+                Some((pr, name)) => {
+                    let mut processed = self
+                        .0
+                        .get(name)
+                        .expect("There should be a workflow with this name.")
+                        .process_part_range(pr);
+                    stack.append(&mut processed);
+                }
             }
-            let workflow = self
-                .0
-                .get(name)
-                .expect("Workflows should contain this name");
-            name = workflow.process_part(part);
         }
     }
 }
