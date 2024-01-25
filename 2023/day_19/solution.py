@@ -119,10 +119,10 @@ class Workflow:
             c = self.conditions[condition_index]
             accepted, rejected = part_range.split(c.var, c.val, c.op)
 
-            if accepted:
+            if accepted.size():
                 yield accepted, c.ret
 
-            if rejected:
+            if rejected.size():
                 yield from self.process_part_range(
                     rejected, condition_index=condition_index + 1
                 )
