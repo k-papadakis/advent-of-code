@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-
 use regex::Regex;
 use std::{collections::HashMap, env, fs};
 
@@ -9,11 +6,11 @@ fn main() {
     let file_path: String = args.nth(1).expect("File path is required.");
     let (workflows, parts) = read_input(&file_path);
 
-    let part_1: usize = parts
+    let part_1 = parts
         .into_iter()
         .filter(|&part| workflows.accepts_part(part))
         .map(|part| part.sum())
-        .sum();
+        .sum::<usize>();
 
     let part_range = PartRange {
         x: ClosedInterval::new(1, 4_000),
@@ -26,22 +23,9 @@ fn main() {
         .accepted_part_ranges(part_range)
         .into_iter()
         .map(|pr| pr.size())
-        .sum();
+        .sum::<usize>();
 
     println!("part_1 = {part_1}, part_2 = {part_2}");
-
-    // workflows
-    //     .accepted_part_ranges(part_range)
-    //     .iter()
-    //     .for_each(|pr| println!("{:?}", pr))
-
-    workflows
-        .0
-        .get("cnm")
-        .unwrap()
-        .process_part_range(part_range)
-        .into_iter()
-        .for_each(|(pr, name)| println!("{} {:?}", name, pr))
 }
 
 type Rating = u16;
@@ -98,7 +82,7 @@ impl ClosedInterval {
     }
 
     fn size(self) -> usize {
-        (self.stop - self.start + 1) as usize
+        (self.stop - self.start + 1).into()
     }
 
     fn split_lt(self, x: Rating) -> (Option<Self>, Option<Self>) {
@@ -159,8 +143,8 @@ impl PartRange {
             Op::Gt => iv.split_gt(condition.val),
         };
 
-        let acc_pr = acc_iv.map(|acc_iv| self.replace(&condition.var, acc_iv));
-        let rej_pr = acc_iv.map(|rej_iv| self.replace(&condition.var, rej_iv));
+        let acc_pr = acc_iv.map(|iv| self.replace(&condition.var, iv));
+        let rej_pr = rej_iv.map(|iv| self.replace(&condition.var, iv));
 
         (acc_pr, rej_pr)
     }
@@ -285,7 +269,7 @@ fn parse_workflows(workflows: &str) -> Workflows {
             .map(|cap| {
                 let [name, logic] = cap.extract().1;
                 let mut conditions: Vec<_> = logic.split(',').collect();
-                let else_ = conditions
+                let otherwise = conditions
                     .pop()
                     .expect("A condition should always contain an `else`.");
 
@@ -323,7 +307,7 @@ fn parse_workflows(workflows: &str) -> Workflows {
                     name.to_string(),
                     Workflow {
                         conditions,
-                        otherwise: else_.to_string(),
+                        otherwise: otherwise.to_string(),
                     },
                 )
             })
