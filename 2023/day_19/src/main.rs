@@ -1,5 +1,15 @@
 use regex::Regex;
-use std::{collections::HashMap, env, fs};
+use std::{
+    collections::HashMap,
+    env, fs,
+    ops::{Index, IndexMut},
+};
+
+const ACCEPT: &str = "A";
+const REJECT: &str = "R";
+const INPUT: &str = "in";
+
+type Rating = u16;
 
 fn main() {
     let mut args = env::args();
@@ -10,61 +20,21 @@ fn main() {
         .into_iter()
         .filter(|&part| workflows.accepts_part(part))
         .map(|part| part.sum())
-        .sum::<usize>();
+        .sum::<isize>();
 
-    let part_range = PartRange {
+    let partrange = PartRange {
         x: ClosedInterval::new(1, 4_000),
         m: ClosedInterval::new(1, 4_000),
         a: ClosedInterval::new(1, 4_000),
         s: ClosedInterval::new(1, 4_000),
     };
 
-    let part_2: usize = workflows
-        .accepted_part_ranges(part_range)
-        .into_iter()
+    let part_2 = workflows
+        .accepted_partranges(partrange)
         .map(|pr| pr.size())
         .sum::<usize>();
 
     println!("part_1 = {part_1}, part_2 = {part_2}");
-}
-
-type Rating = u16;
-
-#[derive(Debug, Copy, Clone)]
-struct Part {
-    x: Rating,
-    m: Rating,
-    a: Rating,
-    s: Rating,
-}
-
-impl Part {
-    fn get(self, var: &Xmas) -> Rating {
-        match var {
-            Xmas::X => self.x,
-            Xmas::M => self.m,
-            Xmas::A => self.a,
-            Xmas::S => self.s,
-        }
-    }
-
-    fn sum(self) -> usize {
-        self.x as usize + self.m as usize + self.a as usize + self.s as usize
-    }
-}
-
-#[derive(Debug)]
-enum Op {
-    Lt,
-    Gt,
-}
-
-#[derive(Debug)]
-enum Xmas {
-    X,
-    M,
-    A,
-    S,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -105,6 +75,20 @@ impl ClosedInterval {
 }
 
 #[derive(Debug, Copy, Clone)]
+struct Part {
+    x: Rating,
+    m: Rating,
+    a: Rating,
+    s: Rating,
+}
+
+impl Part {
+    fn sum(self) -> isize {
+        self.x as isize + self.m as isize + self.a as isize + self.s as isize
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
 struct PartRange {
     x: ClosedInterval,
     m: ClosedInterval,
@@ -117,37 +101,61 @@ impl PartRange {
         self.x.size() * self.m.size() * self.a.size() * self.s.size()
     }
 
-    fn get(self, var: &Xmas) -> ClosedInterval {
-        match var {
-            Xmas::X => self.x,
-            Xmas::M => self.m,
-            Xmas::A => self.a,
-            Xmas::S => self.s,
+    fn replace(mut self, var: Xmas, interval: ClosedInterval) -> Self {
+        self[var] = interval;
+        self
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+enum Xmas {
+    X,
+    M,
+    A,
+    S,
+}
+
+impl Index<Xmas> for Part {
+    type Output = Rating;
+
+    fn index(&self, index: Xmas) -> &Self::Output {
+        match index {
+            Xmas::X => &self.x,
+            Xmas::M => &self.m,
+            Xmas::A => &self.a,
+            Xmas::S => &self.s,
         }
     }
+}
 
-    fn replace(self, var: &Xmas, iv: ClosedInterval) -> Self {
-        match var {
-            Xmas::X => Self { x: iv, ..self },
-            Xmas::M => Self { m: iv, ..self },
-            Xmas::A => Self { a: iv, ..self },
-            Xmas::S => Self { s: iv, ..self },
+impl Index<Xmas> for PartRange {
+    type Output = ClosedInterval;
+
+    fn index(&self, index: Xmas) -> &Self::Output {
+        match index {
+            Xmas::X => &self.x,
+            Xmas::M => &self.m,
+            Xmas::A => &self.a,
+            Xmas::S => &self.s,
         }
     }
+}
 
-    fn split(self, condition: &Condition) -> (Option<Self>, Option<Self>) {
-        let iv = self.get(&condition.var);
-
-        let (acc_iv, rej_iv) = match condition.op {
-            Op::Lt => iv.split_lt(condition.val),
-            Op::Gt => iv.split_gt(condition.val),
-        };
-
-        let acc_pr = acc_iv.map(|iv| self.replace(&condition.var, iv));
-        let rej_pr = rej_iv.map(|iv| self.replace(&condition.var, iv));
-
-        (acc_pr, rej_pr)
+impl IndexMut<Xmas> for PartRange {
+    fn index_mut(&mut self, index: Xmas) -> &mut Self::Output {
+        match index {
+            Xmas::X => &mut self.x,
+            Xmas::M => &mut self.m,
+            Xmas::A => &mut self.a,
+            Xmas::S => &mut self.s,
+        }
     }
+}
+
+#[derive(Debug)]
+enum Op {
+    Lt,
+    Gt,
 }
 
 #[derive(Debug)]
@@ -159,11 +167,22 @@ struct Condition {
 }
 
 impl Condition {
-    fn satisfied_by(&self, x: Rating) -> bool {
+    fn satisfied_by(&self, part: Part) -> bool {
         match self.op {
-            Op::Lt => x < self.val,
-            Op::Gt => x > self.val,
+            Op::Lt => part[self.var] < self.val,
+            Op::Gt => part[self.var] > self.val,
         }
+    }
+
+    fn split(&self, partrange: PartRange) -> (Option<PartRange>, Option<PartRange>) {
+        let (acc, rej) = match self.op {
+            Op::Lt => partrange[self.var].split_lt(self.val),
+            Op::Gt => partrange[self.var].split_gt(self.val),
+        };
+
+        let embed = |iv| partrange.replace(self.var, iv);
+
+        (acc.map(embed), rej.map(embed))
     }
 }
 
@@ -173,76 +192,89 @@ struct Workflow {
     otherwise: String,
 }
 
-impl Workflow {
-    fn process_part(&self, part: Part) -> &str {
-        self.conditions
-            .iter()
-            .filter(|cond| cond.satisfied_by(part.get(&cond.var)))
-            .map(|cond| &cond.ret)
-            .next()
-            .unwrap_or(&self.otherwise)
-    }
-
-    fn process_part_range(&self, part_range: PartRange) -> Vec<(PartRange, &str)> {
-        let mut pending = vec![(part_range, 0_usize)];
-        let mut results: Vec<(PartRange, &str)> = Vec::new();
-
-        while let Some((pr, i)) = pending.pop() {
-            if i < self.conditions.len() {
-                let condition = &self.conditions[i];
-                let (accepted, rejected) = pr.split(condition);
-
-                if let Some(accepted) = accepted {
-                    results.push((accepted, &condition.ret));
-                }
-
-                if let Some(rejected) = rejected {
-                    pending.push((rejected, i + 1))
-                }
-            } else {
-                results.push((pr, &self.otherwise));
-            }
-        }
-        results
-    }
-}
-
 #[derive(Debug)]
 struct Workflows(HashMap<String, Workflow>);
 
 impl Workflows {
     fn accepts_part(&self, part: Part) -> bool {
-        let mut name = "in";
+        let mut name = INPUT;
 
         loop {
             name = match name {
-                "A" | "R" => return name == "A",
-                _ => self
-                    .0
-                    .get(name)
-                    .expect("There should be a workflow with this name.")
-                    .process_part(part),
+                ACCEPT | REJECT => return name == ACCEPT,
+                _ => {
+                    let workflow = self
+                        .0
+                        .get(name)
+                        .expect("There should be a workflow with this name.");
+
+                    workflow
+                        .conditions
+                        .iter()
+                        .filter(|cond| cond.satisfied_by(part))
+                        .map(|cond| &cond.ret)
+                        .next()
+                        .unwrap_or(&workflow.otherwise)
+                }
             }
         }
     }
 
-    fn accepted_part_ranges(&self, part_range: PartRange) -> Vec<PartRange> {
-        let mut res = Vec::new();
-        let mut stack = vec![(part_range, "in")];
+    fn accepted_partranges(&self, partrange: PartRange) -> PartRangeProcessor {
+        let init = (
+            partrange,
+            self.0
+                .get(INPUT)
+                .expect("There should be a workflow with this name."),
+            0,
+        );
+        PartRangeProcessor {
+            workflows: self,
+            pending: vec![init],
+        }
+    }
+}
 
+struct PartRangeProcessor<'a> {
+    workflows: &'a Workflows,
+    pending: Vec<(PartRange, &'a Workflow, usize)>,
+}
+
+impl Iterator for PartRangeProcessor<'_> {
+    type Item = PartRange;
+
+    fn next(&mut self) -> Option<Self::Item> {
         loop {
-            match stack.pop() {
-                None => return res,
-                Some((pr, "A")) => res.push(pr),
-                Some((_, "R")) => continue,
-                Some((pr, name)) => {
-                    let mut processed = self
-                        .0
-                        .get(name)
-                        .expect("There should be a workflow with this name.")
-                        .process_part_range(pr);
-                    stack.append(&mut processed);
+            let (partrange, workflow, i) = self.pending.pop()?;
+
+            let (res, to) = if i < workflow.conditions.len() {
+                let condition = &workflow.conditions[i];
+
+                let (valid, invalid) = condition.split(partrange);
+
+                if let Some(invalid) = invalid {
+                    self.pending.push((invalid, workflow, i + 1))
                 }
+
+                match valid {
+                    None => continue,
+                    Some(valid) => (valid, condition.ret.as_ref()),
+                }
+            } else {
+                (partrange, workflow.otherwise.as_ref())
+            };
+
+            match to {
+                ACCEPT => return Some(res),
+                REJECT => continue,
+                _ => self.pending.push((
+                    res,
+                    self.workflows
+                        .0
+                        .get(to)
+                        .expect("There should be a workflow with this name."),
+                    0,
+                )),
             }
         }
     }
