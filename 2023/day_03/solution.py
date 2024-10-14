@@ -1,6 +1,5 @@
 from collections import defaultdict
 from collections.abc import Generator
-from typing import Any
 
 type Coordinate = tuple[int, int]
 
@@ -14,12 +13,8 @@ def issymbol(s: str) -> bool:
     return len(s) == 1 and s != "." and not s.isdigit()
 
 
-def neighbors(
-    arr: list[list[Any]], i: int, j: int
-) -> Generator[Coordinate, None, None]:
-    m = len(arr)
-    n = len(arr[0])
-    for k, l in (
+def neighbors(m: int, n: int, i: int, j: int) -> Generator[Coordinate, None, None]:
+    for u, v in (
         (i - 1, j),
         (i + 1, j),
         (i, j - 1),
@@ -29,8 +24,8 @@ def neighbors(
         (i - 1, j + 1),
         (i + 1, j - 1),
     ):
-        if 0 <= k < m and 0 <= l < n:
-            yield k, l
+        if 0 <= u < m and 0 <= v < n:
+            yield u, v
 
 
 def list_to_int(lst: list[str]) -> int:
@@ -45,21 +40,14 @@ def get_part_nums(arr: list[list[str]]) -> Generator[int, None, None]:
     borders_symbol: bool = False
 
     for i in range(m):
-        if start and borders_symbol:
-            yield list_to_int(arr[start[0]][start[1] :])
-        start = None
-        borders_symbol = False
-
-        for j in range(n):
-            if arr[i][j].isdigit():
+        for j in range(n + 1):
+            if j != n and arr[i][j].isdigit():
                 if not start:
                     start = i, j
-
                 if not borders_symbol:
                     borders_symbol = any(
-                        issymbol(arr[k][l]) for k, l in neighbors(arr, i, j)
+                        issymbol(arr[u][v]) for u, v in neighbors(m, n, i, j)
                     )
-
             else:
                 if start and borders_symbol:
                     yield list_to_int(arr[start[0]][start[1] : j])
@@ -76,28 +64,18 @@ def get_gears(arr: list[list[str]]) -> dict[Coordinate, tuple[int, int]]:
     stars: dict[Coordinate, list[int]] = defaultdict(list)
 
     for i in range(m):
-        if start and bordering_stars:
-            number = list_to_int(arr[start[0]][start[1] :])
-
-            for star in bordering_stars:
-                stars[star].append(number)
-
-            bordering_stars.clear()
-            start = None
-
-        for j in range(n):
-            if arr[i][j].isdigit():
+        for j in range(n + 1):
+            if j != n and arr[i][j].isdigit():
                 if not start:
                     start = i, j
                 bordering_stars.update(
-                    (k, l) for k, l in neighbors(arr, i, j) if arr[k][l] == "*"
+                    (u, v) for u, v in neighbors(m, n, i, j) if arr[u][v] == "*"
                 )
             else:
                 if start and bordering_stars:
                     number = list_to_int(arr[start[0]][start[1] : j])
                     for star in bordering_stars:
                         stars[star].append(number)
-
                 start = None
                 bordering_stars.clear()
 
