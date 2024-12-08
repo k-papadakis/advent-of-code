@@ -1,5 +1,5 @@
-input.txt
-small.txt
+input*.txt
+small*.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
