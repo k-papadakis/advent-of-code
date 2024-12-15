@@ -22,25 +22,41 @@ def read_input(
     return grid, starting_position, directions
 
 
-def move(
+def can_move(
     grid: list[list[str]], position: tuple[int, int], direction: tuple[int, int]
 ) -> bool:
     x, y = position
     dx, dy = direction
     xx, yy = x + dx, y + dy
+
     match grid[xx][yy]:
         case "#":
             return False
         case ".":
-            grid[x][y], grid[xx][yy] = grid[xx][yy], grid[x][y]
             return True
         case "O":
-            m = move(grid, (xx, yy), direction)
-            if m:
-                grid[x][y], grid[xx][yy] = grid[xx][yy], grid[x][y]
-            return m
+            return can_move(grid, (xx, yy), direction)
         case _:
-            raise ValueError(f"Encountered invalid symbol {grid[xx][yy]}")
+            raise ValueError(f"Invalid symbol {grid[xx][yy]}")
+
+
+def move(
+    grid: list[list[str]], position: tuple[int, int], direction: tuple[int, int]
+) -> None:
+    x, y = position
+    dx, dy = direction
+    xx, yy = x + dx, y + dy
+
+    match grid[xx][yy]:
+        case "#":
+            raise ValueError("Invalid Move")
+        case ".":
+            grid[x][y], grid[xx][yy] = grid[xx][yy], grid[x][y]
+        case "O":
+            move(grid, (xx, yy), direction)
+            grid[x][y], grid[xx][yy] = grid[xx][yy], grid[x][y]
+        case _:
+            raise ValueError(f"Invalid symbol {grid[xx][yy]}")
 
 
 def print_grid(grid: list[list[str]], position: tuple[int, int]) -> None:
@@ -58,7 +74,8 @@ def main():
     file_path = sys.argv[1]
     grid, position, directions = read_input(file_path, expanded=False)
     for direction in directions:
-        if move(grid, position, direction):
+        if can_move(grid, position, direction):
+            move(grid, position, direction)
             position = position[0] + direction[0], position[1] + direction[1]
     print_grid(grid, position)
     print()
