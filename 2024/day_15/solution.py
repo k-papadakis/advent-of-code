@@ -2,10 +2,13 @@ import sys
 
 
 def read_input(
-    file_path: str,
+    file_path: str, expanded: bool
 ) -> tuple[list[list[str]], tuple[int, int], list[tuple[int, int]]]:
     with open(file_path) as f:
         grid_str, directions_str = f.read().split("\n\n")
+    if expanded:
+        trans = str.maketrans({"#": "##", ".": "..", "@": "@.", "O": "[]"})
+        grid_str = grid_str.translate(trans)
     grid = [list(line) for line in grid_str.splitlines()]
     starting_position = next(
         (i, j)
@@ -53,7 +56,7 @@ def print_grid(grid: list[list[str]], position: tuple[int, int]) -> None:
 
 def main():
     file_path = sys.argv[1]
-    grid, position, directions = read_input(file_path)
+    grid, position, directions = read_input(file_path, expanded=False)
     for direction in directions:
         if move(grid, position, direction):
             position = position[0] + direction[0], position[1] + direction[1]
