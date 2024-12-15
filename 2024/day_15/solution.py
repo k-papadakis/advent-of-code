@@ -15,35 +15,29 @@ def read_input(
     )
     grid[starting_position[0]][starting_position[1]] = "."
     dmap = {">": (0, 1), "^": (-1, 0), "<": (0, -1), "v": (1, 0)}
-    directions = [dmap[d] for d in "".join(directions_str.splitlines())]
+    directions = [dmap[d] for d in directions_str.replace("\n", "")]
     return grid, starting_position, directions
 
 
 def move(
     grid: list[list[str]], position: tuple[int, int], direction: tuple[int, int]
-) -> tuple[int, int]:
+) -> bool:
     x, y = position
     dx, dy = direction
     xx, yy = x + dx, y + dy
-
-    if grid[xx][yy] == ".":
-        return xx, yy
-
-    if grid[xx][yy] == "#":
-        return x, y
-
-    assert grid[xx][yy] == "O"
-
-    while (xx := xx + dx) in range(len(grid)) and (yy := yy + dy) in range(
-        len(grid[0])
-    ):
-        if grid[xx][yy] == "#":
-            return x, y
-        if grid[xx][yy] == ".":
-            grid[x + dx][y + dy], grid[xx][yy] = grid[xx][yy], grid[x + dx][y + dy]
-            return x + dx, y + dy
-
-    raise ValueError("oh well")
+    match grid[xx][yy]:
+        case "#":
+            return False
+        case ".":
+            grid[x][y], grid[xx][yy] = grid[xx][yy], grid[x][y]
+            return True
+        case "O":
+            m = move(grid, (xx, yy), direction)
+            if m:
+                grid[x][y], grid[xx][yy] = grid[xx][yy], grid[x][y]
+            return m
+        case _:
+            raise ValueError(f"Encountered invalid symbol {grid[xx][yy]}")
 
 
 def print_grid(grid: list[list[str]], position: tuple[int, int]) -> None:
@@ -61,7 +55,10 @@ def main():
     file_path = sys.argv[1]
     grid, position, directions = read_input(file_path)
     for direction in directions:
-        position = move(grid, position, direction)
+        if move(grid, position, direction):
+            position = position[0] + direction[0], position[1] + direction[1]
+    print_grid(grid, position)
+    print()
     part_1 = sum(
         100 * i + j
         for i in range(len(grid))
