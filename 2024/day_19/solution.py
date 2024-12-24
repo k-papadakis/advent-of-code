@@ -1,3 +1,4 @@
+from functools import cache
 import sys
 
 
@@ -19,11 +20,23 @@ def is_possible(design: str, towels: frozenset[str]) -> bool:
     )
 
 
+@cache
+def num_possible(design: str, towels: frozenset[str]) -> int:
+    if not design:
+        return 1
+    return sum(
+        num_possible(design[len(towel) :], towels)
+        for towel in towels
+        if design.startswith(towel)
+    )
+
+
 def main():
     file_path = sys.argv[1]
     towels, designs = read_input(file_path)
     part_1 = sum(is_possible(design, towels) for design in designs)
-    print(part_1)
+    part_2 = sum(num_possible(design, towels) for design in designs)
+    print(f"{part_1 = } {part_2 = }")
 
 
 if __name__ == "__main__":
