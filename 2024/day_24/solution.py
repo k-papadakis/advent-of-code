@@ -57,8 +57,32 @@ def compute_z(wires: dict[str, bool], gates: list[tuple[str, str, str, str]]):
 def main():
     file_path = sys.argv[1]
     wires, gates = read_input(file_path)
-    part_1 = compute_z(wires, gates)
-    print(part_1)
+    # part_1 = compute_z(wires, gates)
+    # print(part_1)
+
+    # https://www.ece.uvic.ca/~fayez/courses/ceng465/lab_465/project1/adders.pdf
+    gates = {(a, op, b): c for a, op, b, c in gates} | {
+        (b, op, a): c for a, op, b, c in gates
+    }
+    c_in: str | None = None
+    for i in range(45):
+        x = f"x{i:02d}"
+        y = f"y{i:02d}"
+        z = f"z{i:02d}"
+
+        p = gates[x, "XOR", y]
+        g = gates[x, "AND", y]
+
+        if c_in is None:
+            pc = p
+            c_out = g
+            s = p
+        else:
+            pc = gates[p, "AND", c_in]
+            c_out = gates[g, "OR", pc]
+            s = gates[p, "XOR", c_in]
+        c_in = c_out
+        print(i)
 
 
 if __name__ == "__main__":
