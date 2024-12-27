@@ -81,8 +81,37 @@ def main():
             pc = gates[p, "AND", c_in]
             c_out = gates[g, "OR", pc]
             s = gates[p, "XOR", c_in]
+            if s != z:
+                raise ValueError(f"{s=} {z=}")
         c_in = c_out
-        print(i)
+
+
+# c_out at iteration 12 was z12,
+# so there was a broken c_in at iteration 13.
+# s should have been z12 at iteration 12,
+# but it was fgc.
+# Swap fgc and z12
+#
+# pc was z29 at iteration 29,
+# so c_out was broken at the same iteration.
+# Assume that g was ok (=wbg).
+# Let's look for "wbg OR" or "OR wbg"
+# the other part of "OR" is going to be the correct pc.
+# A match was found and it was `wbg OR mtj -> gdv`,
+# so pc should be mtj,
+# and mtj should be swapped with z29.
+#
+# At iteration 33, pc was broken.
+# Its inputs were "p=vvm AND c_in=rrd".
+# Let's look for "vvm AND" or "AND rrd".
+# A match was found and it was "dgr AND rrd -> vtc".
+# So, dgr and vvm should be swapped.
+#
+# At iteration 37, c_out was broken.
+# Its inputs were "g=z37 OR pc=wjd".
+# Let's look for "OR wjd".
+# A match was found and it was "wjd OR dtv -> jkb".
+# So, swap z37 and dtv.
 
 
 if __name__ == "__main__":
