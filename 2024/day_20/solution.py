@@ -1,4 +1,3 @@
-from collections.abc import Generator
 import sys
 
 
@@ -27,22 +26,23 @@ def parse_path(grid: list[str]) -> list[tuple[int, int]]:
     return path
 
 
-def find_cheats(
-    path: list[tuple[int, int]],
-) -> Generator[tuple[int, int]]:
-    for i in range(len(path)):
-        for j in range(i + 3, len(path)):
-            if abs(path[j][0] - path[i][0]) + abs(path[j][1] - path[i][1]) == 2:
-                yield (i, j)
+def count_cheats(path: list[tuple[int, int]], allowed_time: int, min_saved: int) -> int:
+    return sum(
+        (l1 := abs(path[j][0] - path[i][0]) + abs(path[j][1] - path[i][1]))
+        <= allowed_time
+        and j - i - l1 >= min_saved
+        for i in range(len(path))
+        for j in range(i + min_saved + 1, len(path))
+    )
 
 
 def main():
     file_path = sys.argv[1]
     grid = read_input(file_path)
     path = parse_path(grid)
-
-    part_1 = sum(j - i - 2 >= 100 for i, j in find_cheats(path))
-    print(part_1)
+    part_1 = count_cheats(path, 2, 100)
+    part_2 = count_cheats(path, 20, 100)
+    print(f"{part_1 = } {part_2 = }")
 
 
 if __name__ == "__main__":
