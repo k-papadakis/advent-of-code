@@ -20,8 +20,6 @@ DIRPAD_POS = {
     DIRPAD[i][j]: (i, j) for i in range(len(DIRPAD)) for j in range(len(DIRPAD[0]))
 }
 
-DIRECTIONS = [(">", (0, 1)), ("^", (-1, 0)), ("<", (0, -1)), ("v", (1, 0))]
-
 
 def read_input(file_path: str) -> list[str]:
     with open(file_path) as f:
@@ -29,40 +27,56 @@ def read_input(file_path: str) -> list[str]:
 
 
 @cache
-def shortest_paths(source_str: str, target_str: str) -> list[str]:
+def candidate_paths(source_str: str, target_str: str) -> list[str]:
     if source_str in DIRPAD_POS and target_str in DIRPAD_POS:
-        pad = DIRPAD
-        source = DIRPAD_POS[source_str]
-        target = DIRPAD_POS[target_str]
+        pad_pos = DIRPAD_POS
     elif source_str in NUMPAD_POS and target_str in NUMPAD_POS:
-        pad = NUMPAD
-        source = NUMPAD_POS[source_str]
-        target = NUMPAD_POS[target_str]
+        pad_pos = NUMPAD_POS
     else:
         raise ValueError("`source` and `target` are not in the same pad.")
+    source = pad_pos[source_str]
+    target = pad_pos[target_str]
+    x = pad_pos["X"]
+
+    if source == target:
+        return [""]
 
     res: list[str] = []
-    l1 = abs(target[0] - source[0]) + abs(target[1] - source[1])
-    stack = [(source, "")]
-    while stack:
-        pos, path = stack.pop()
-        if (
-            len(path) > l1
-            or not (0 <= pos[0] < len(pad))
-            or not (0 <= pos[1] < len(pad[0]))
-            or pad[pos[0]][pos[1]] == "X"
-        ):
-            continue
-        if pos == target:
-            res.append(path)
-        for c, d in DIRECTIONS:
-            stack.append(((pos[0] + d[0], pos[1] + d[1]), path + c))
+
+    if (
+        x[0] != source[0]
+        or x[1] < min(source[1], target[1])
+        or x[1] > max(source[1], target[1])
+    ) and (
+        x[1] != target[1]
+        or x[0] < min(source[0], target[0])
+        or x[0] > max(source[0], target[0])
+    ):
+        res.append(
+            (">" if source[1] < target[1] else "<") * abs(target[1] - source[1])
+            + ("v" if source[0] < target[0] else "^") * abs(target[0] - source[0])
+        )
+
+    if (
+        x[1] != source[1]
+        or x[0] < min(source[0], target[0])
+        or x[0] > max(source[0], target[0])
+    ) and (
+        x[0] != target[0]
+        or x[1] < min(source[1], target[1])
+        or x[1] > max(source[1], target[1])
+    ):
+        res.append(
+            ("v" if source[0] < target[0] else "^") * abs(target[0] - source[0])
+            + (">" if source[1] < target[1] else "<") * abs(target[1] - source[1])
+        )
+
     return res
 
 
 @cache
 def shortest_path_length(source: str, target: str, num_robot_dirpads: int) -> int:
-    paths = shortest_paths(source, target)
+    paths = candidate_paths(source, target)
     if num_robot_dirpads == 0:
         return 1 + min(map(len, paths))  # 1 is for the A that needs to be pressed
     return min(
