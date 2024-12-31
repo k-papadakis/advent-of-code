@@ -1,105 +1,64 @@
+import sys
 from dataclasses import dataclass
-from functools import cache
-from itertools import groupby, pairwise, product
-from typing import Self
-
-type Graph[T] = dict[T, set[T]]
-
-
-@dataclass(slots=True, frozen=True)
-class Range:
-    min: int
-    max: int
-
-    def intersects(self, other: Self) -> bool:
-        return max(self.min, other.min) <= min(self.max, other.max)
+from collections import defaultdict
 
 
 @dataclass(slots=True, frozen=True)
 class Brick:
-    x: Range
-    y: Range
-    z: Range
-
-    def supports(self, other: Self) -> bool:
-        return (
-            self.z.max < other.z.min
-            and self.x.intersects(other.x)
-            and self.y.intersects(other.y)
-        )
-
-    def __repr__(self) -> str:
-        return (
-            f"{self.x.min},{self.y.min},{self.z.min}"
-            f"~{self.x.max},{self.y.max},{self.z.max}"
-        )
-
-    @classmethod
-    def from_string(cls, brick_str: str) -> Self:
-        starts_str, ends_str = brick_str.strip().split("~")
-        x_min, y_min, z_min = map(int, starts_str.split(","))
-        x_max, y_max, z_max = map(int, ends_str.split(","))
-        brick = cls(Range(x_min, x_max), Range(y_min, y_max), Range(z_min, z_max))
-        return brick
+    x_min: int
+    y_min: int
+    z_min: int
+    x_max: int
+    y_max: int
+    z_max: int
 
 
-def fall_bricks(bricks: list[Brick]) -> list[Brick]:
-    supporters: Graph[Brick] = {brick: set() for brick in bricks}
-    for a, b in product(bricks, repeat=2):
-        if a.supports(b):
-            supporters[b].add(a)
-
-    @cache
-    def fall_brick(brick: Brick) -> Brick:
-        if not supporters[brick]:
-            z_min = 1
-        else:
-            z_min = 1 + max(
-                supporter.z.max for supporter in map(fall_brick, supporters[brick])
-            )
-        z_max = z_min + (brick.z.max - brick.z.min)
-
-        return Brick(brick.x, brick.y, Range(z_min, z_max))
-
-    return list(map(fall_brick, bricks))
+def read_input(file_path: str) -> list[Brick]:
+    bricks: list[Brick] = []
+    with open(file_path) as f:
+        for brick_str in f:
+            starts_str, ends_str = brick_str.strip().split("~")
+            x_min, y_min, z_min = map(int, starts_str.split(","))
+            x_max, y_max, z_max = map(int, ends_str.split(","))
+            bricks.append(Brick(x_min, y_min, z_min, x_max, y_max, z_max))
+    return bricks
 
 
-def find_supporters_supportees(
+def build_brick_graph(
     bricks: list[Brick],
-) -> tuple[Graph[Brick], Graph[Brick]]:
-    supporters: Graph[Brick] = {brick: set() for brick in bricks}
-    supportees: Graph[Brick] = {brick: set() for brick in bricks}
-
-    bricks = sorted(bricks, key=lambda brick: brick.z.min)
-
-    grouped = [
-        list(group) for _, group in groupby(bricks, key=lambda brick: brick.z.min)
-    ]
-    for g1, g2 in pairwise(grouped):
-        for a, b in product(g1, g2):
-            if a.supports(b):
-                supporters[b].add(a)
-                supportees[a].add(b)
-
+) -> tuple[defaultdict[int, set[int]], defaultdict[int, set[int]]]:
+    x_max = max(brick.x_max for brick in bricks)
+    y_max = max(brick.y_max for brick in bricks)
+    heights = [[0 for _ in range(1 + y_max)] for _ in range(1 + x_max)]
+    brick_ids = [[-1 for _ in range(1 + y_max)] for _ in range(1 + x_max)]
+    supporters: defaultdict[int, set[int]] = defaultdict(set)
+    supportees: defaultdict[int, set[int]] = defaultdict(set)
+    for brick_id, brick in sorted(enumerate(bricks), key=lambda t: t[1].z_min):
+        rx = range(brick.x_min, brick.x_max + 1)
+        ry = range(brick.y_min, brick.y_max + 1)
+        height = max(heights[x][y] for x in rx for y in ry)
+        for x in rx:
+            for y in ry:
+                if heights[x][y] == height:
+                    supporter_id = brick_ids[x][y]
+                    if supporter_id != -1:
+                        supporters[brick_id].add(supporter_id)
+                        supportees[supporter_id].add(brick_id)
+                heights[x][y] = height + brick.z_max - brick.z_min + 1
+                brick_ids[x][y] = brick_id
     return supporters, supportees
 
 
-def read_input(path: str) -> list[Brick]:
-    with open(path) as f:
-        return list(map(Brick.from_string, f))
-
-
 def main():
-    unfallen_bricks = read_input("./2023/day_22/input.txt")
-    fallen_bricks = fall_bricks(unfallen_bricks)
-    supporters, supportees = find_supporters_supportees(fallen_bricks)
+    file_path = sys.argv[1]
+    bricks = read_input(file_path)
+    supporters, supportees = build_brick_graph(bricks)
 
     part_1 = sum(
-        all(len(supporters[supportee]) > 1 for supportee in supportees[brick])
-        for brick in fallen_bricks
+        all(len(supporters[supportee]) > 1 for supportee in supportees[brick_id])
+        for brick_id in range(len(bricks))
     )
-
-    print(f"{part_1 = }")
+    print(part_1)
 
 
 if __name__ == "__main__":
