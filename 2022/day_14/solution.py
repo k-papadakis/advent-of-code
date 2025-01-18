@@ -56,7 +56,25 @@ def num_fallen_till_abyss(grid: Grid, source: tuple[int, int] = (0, 500)) -> int
     return num_sands
 
 
-SOURCE = (0, 500)
+def num_fallen_till_block(grid: Grid, source: tuple[int, int] = (0, 500)) -> int:
+    grid = deepcopy(grid)
+    m = 1 + max(x for x, _ in grid)
+    i, j = source
+    num_sands = 0
+    while True:
+        if i + 1 != m + 1 and (i + 1, j) not in grid:
+            i, j = i + 1, j
+        elif i + 1 != m + 1 and (i + 1, j - 1) not in grid:
+            i, j = i + 1, j - 1
+        elif i + 1 != m + 1 and (i + 1, j + 1) not in grid:
+            i, j = i + 1, j + 1
+        else:
+            grid[i, j] = "o"
+            num_sands += 1
+            if (i, j) == source:
+                break
+            i, j = source
+    return num_sands
 
 
 def main():
@@ -67,8 +85,10 @@ def main():
     grid = make_grid(paths)
     with open("grid.txt", "w") as f:
         _ = f.write(grid_str(grid))
-    part_1 = num_fallen_till_abyss(grid, SOURCE)
+    part_1 = num_fallen_till_abyss(grid)
     print(part_1)
+    part_2 = num_fallen_till_block(grid)
+    print(part_2)
 
 
 if __name__ == "__main__":
