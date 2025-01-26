@@ -5,6 +5,8 @@ type Graph = dict[str, dict[str, int]]
 type Rates = dict[str, int]
 type Dists = dict[tuple[str, str], int | float]
 
+INFINITY = float("infinity")
+
 
 def read_input(file_path: str) -> tuple[Graph, Rates]:
     pattern = re.compile(
@@ -21,7 +23,6 @@ def read_input(file_path: str) -> tuple[Graph, Rates]:
 
 
 def floyd_warshall(graph: Graph) -> Dists:
-    INFINITY = float("infinity")
     vertices = list(graph)
 
     dists: Dists = {(u, v): INFINITY for u, v in itertools.product(vertices, repeat=2)}
@@ -57,13 +58,43 @@ def find_max_flow(
     return dfs(source, remaining_time)
 
 
+def find_max_flow_with_elephant(
+    graph: Graph, rates: Rates, source: str, remaining_time: int
+) -> int | float:
+    dists = floyd_warshall(graph)
+    nonzeros = [v for v, r in rates.items() if r > 0]
+    opened: set[str] = set()
+    max_flows: dict[frozenset[str], int | float] = {}  # opened_valves: max_flow
+
+    def dfs(u: str, remaining_time: int | float, flow: int | float) -> None:
+        fropened = frozenset(opened)
+        max_flows[fropened] = max(max_flows.get(fropened, 0), flow)
+        for v in nonzeros:
+            t = remaining_time - dists[u, v] - 1
+            if v not in opened and t >= 0:
+                opened.add(v)
+                dfs(v, t, t * rates[v] + flow)
+                opened.remove(v)
+
+    dfs(source, remaining_time, 0)
+    max_flow = max(
+        flow1 + flow2
+        for (fropened1, flow1), (fropened2, flow2) in itertools.product(
+            max_flows.items(), repeat=2
+        )
+        if not fropened1 & fropened2
+    )
+    return max_flow
+
+
 def main() -> None:
     import sys
 
     file_path = sys.argv[1]
     graph, rates = read_input(file_path)
     part_1 = find_max_flow(graph, rates, "AA", 30)
-    print(part_1)
+    part_2 = find_max_flow_with_elephant(graph, rates, "AA", 26)
+    print(f"{part_1 = } {part_2 = }")
 
 
 if __name__ == "__main__":
