@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from itertools import cycle, islice
 from typing import Self
 
 type Pair = tuple[int, int]
@@ -41,32 +40,52 @@ def read_input(file_path: str) -> str:
 class Shape:
     points: set[Pair]
 
-    def offset(self, di: int, dj: int) -> Self:
+    def move(self, di: int, dj: int) -> Self:
         return type(self)({(i + di, j + dj) for i, j in self.points})
 
-    def up(self, n: int = 1) -> Self:
-        return self.offset(n, 0)
+    def move_up(self, n: int = 1) -> Self:
+        return self.move(n, 0)
 
-    def down(self, n: int = 1) -> Self:
-        return self.offset(-n, 0)
+    def move_down(self, n: int = 1) -> Self:
+        return self.move(-n, 0)
 
-    def left(self, n: int = 1) -> Self:
-        return self.offset(0, -n)
+    def move_left(self, n: int = 1) -> Self:
+        return self.move(0, -n)
 
-    def right(self, n: int = 1) -> Self:
-        return self.offset(0, n)
+    def move_right(self, n: int = 1) -> Self:
+        return self.move(0, n)
 
     def in_bounds(self, width: int = WIDTH) -> bool:
         return all(0 <= j < width for _, j in self.points)
 
     def disjoint(self, other: Self) -> bool:
-        return len(self.points & other.points) == 0
+        return not self.points & other.points
 
     def update(self, other: Self) -> None:
         return self.points.update(other.points)
 
-    def max_height(self) -> int:
+    def get_height(self) -> int:
         return max(i for i, _ in self.points)
+
+    def get_boundary(self, height: int | None = None, width: int = WIDTH) -> Self:
+        if height is None:
+            height = self.get_height()
+        stack: list[Pair] = [(height, 0)]
+        seen: set[Pair] = set()
+        boundary: set[Pair] = set()
+        while stack:
+            x, y = stack.pop()
+            if (x, y) in seen:
+                continue
+            seen.add((x, y))
+            if not (0 <= x <= height and 0 <= y < width):
+                continue
+            if (x, y) in self.points:
+                boundary.add((x, y))
+                continue
+            for dx, dy in (1, 0), (0, 1), (-1, 0), (0, -1):
+                stack.append((x + dx, y + dy))
+        return type(self)(boundary)
 
     @classmethod
     def from_array(cls, a: list[str]) -> Self:
@@ -81,7 +100,9 @@ class Shape:
         )
 
 
-def show(grid: Shape, shape: Shape, width: int = WIDTH) -> None:
+def show_grid(grid: Shape, shape: Shape | None, width: int = WIDTH) -> None:
+    if shape is None:
+        shape = Shape(set())
     m = max(i for i, _ in grid.points | shape.points) + 1
 
     def symbol(i: int, j: int) -> str:
@@ -98,38 +119,66 @@ def show(grid: Shape, shape: Shape, width: int = WIDTH) -> None:
     print(s)
 
 
-def simulate(nshapes: int, jet_patterns: str, width: int = WIDTH) -> int:
-    SHAPES = [Shape.from_array(a) for a in SHAPE_ARRAYS]
+def find_height(
+    nshapes: int,
+    jets: str,
+    shape_arrays: list[list[str]] = SHAPE_ARRAYS,
+    width: int = WIDTH,
+) -> int:
+    shapes = [Shape.from_array(a) for a in shape_arrays]
 
     grid = Shape({(-1, i) for i in range(width)})
-    grid_height: int = 0
-    jet_patterns_iter = cycle(jet_patterns)
-    for shape in islice(cycle(SHAPES), nshapes):
-        shape = shape.offset(grid_height + 3, 2)
+    height: int = 0
+    i_jet = -1
+    # (boundary, i_shape_mod, i_jet_mod) -> i_shape
+    states: dict[tuple[frozenset[Pair], int, int], int] = {}
+    heights: list[int] = []
 
-        while shape:
-            blown = shape.left() if next(jet_patterns_iter) == "<" else shape.right()
+    for i_shape in range(nshapes):
+        shape = shapes[i_shape % len(shapes)].move(height + 3, 2)
+
+        while True:
+            i_jet += 1
+            jet = jets[i_jet % len(jets)]
+            blown = shape.move_left() if jet == "<" else shape.move_right()
             if blown.in_bounds() and blown.disjoint(grid):
                 shape = blown
 
-            descended = shape.down()
+            descended = shape.move_down()
             if descended.disjoint(grid):
                 shape = descended
             else:
-                grid_height = max(grid_height, 1 + shape.max_height())
+                height = max(height, 1 + shape.get_height())
+                heights.append(height)
                 grid.update(shape)
+                boundary = frozenset(grid.get_boundary(height).move_down(height).points)
+
+                # Cycle detection
+                s = (boundary, i_shape % len(shapes), i_jet % len(jets))
+                if s in states:
+                    prev_i_shape = states[s]
+                    ncycles, r = divmod(nshapes - prev_i_shape, i_shape - prev_i_shape)
+                    return (
+                        heights[prev_i_shape]
+                        + (heights[i_shape] - heights[prev_i_shape]) * ncycles
+                        + (heights[prev_i_shape + r] - heights[prev_i_shape])
+                        - 1
+                    )
+                states[s] = i_shape
+
                 break
 
-    return grid_height
+    return height
 
 
 def main() -> None:
     import sys
 
     file_path = sys.argv[1]
-    jet_patterns = read_input(file_path)
-    part_1 = simulate(2022, jet_patterns)
-    print(f"{part_1 = }")
+    jets = read_input(file_path)
+    part_1 = find_height(2022, jets)
+    part_2 = find_height(1_000_000_000_000, jets)
+    print(f"{part_1 = } {part_2}")
 
 
 if __name__ == "__main__":
