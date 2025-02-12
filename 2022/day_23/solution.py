@@ -1,3 +1,5 @@
+# TODO: Clean up this mess.
+
 from collections import defaultdict
 
 type Point = tuple[int, int]
@@ -71,17 +73,17 @@ def simulate(grid: list[str], rounds: int) -> int:
         for j in range(len(grid[0]))
         if grid[i][j] == "#"
     }
-    print("Initial state:")
-    print_grid(elves)
-    print()
+    # print("Initial state:")
+    # print_grid(elves)
+    # print()
     for round in range(rounds):
         changed = step(elves, round)
         if not changed:
             print(f"Stable after {round + 1} rounds")
             break
-        print(f"Round {round + 1}:")
-        print_grid(elves)
-        print()
+        # print(f"Round {round + 1}:")
+        # print_grid(elves)
+        # print()
     (min_x, min_y), (max_x, max_y) = find_bounding_rectangles(elves)
     area = (max_x - min_x + 1) * (max_y - min_y + 1)
     return area - len(elves)
@@ -92,7 +94,7 @@ def main() -> None:
 
     file_path = sys.argv[1]
     grid = read_input(file_path)
-    part_1 = simulate(grid, 10)
+    part_1 = simulate(grid, 100_000)
     print(part_1)
 
 
