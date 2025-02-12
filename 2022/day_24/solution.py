@@ -38,20 +38,23 @@ def find_blizzards_till_repeat(grid: list[str]) -> list[list[list[bool]]]:
     has_blizzard: list[list[list[bool]]] = []
     g = [["" if grid[i][j] == "." else grid[i][j] for j in range(n)] for i in range(m)]
     has_blizzard.append([[len(g[i][j]) > 0 for j in range(n)] for i in range(m)])
-    for _ in range(lcm(m, n) - 1):
+    for _ in range(lcm(m - 2, n - 2) - 1):
         g = advance_grid(g)
         has_blizzard.append([[len(g[i][j]) > 0 for j in range(n)] for i in range(m)])
     return has_blizzard
 
 
-def quickest_path(grid: list[str]) -> int:
+def quickest_path(
+    grid: list[str],
+    has_blizzard: list[list[list[bool]]],
+    source: Point,
+    target: Point,
+    starting_time: int,
+) -> int:
     m, n = len(grid), len(grid[0])
-    source = next((0, j) for j in range(n) if grid[0][j] == ".")
-    target = next((m - 1, j) for j in range(n) if grid[m - 1][j] == ".")
-    has_blizzard = find_blizzards_till_repeat(grid)
     mod = len(has_blizzard)
     visited: set[tuple[Point, int]] = set()
-    q = deque([(0, source)])
+    q = deque([(starting_time, source)])
     while q:
         time, (i, j) = q.popleft()
         if (i, j) == target:
@@ -66,13 +69,7 @@ def quickest_path(grid: list[str]) -> int:
             or grid[i][j] == "#"
         ):
             continue
-        for new_i, new_j in [
-            (i, j),
-            (i - 1, j),
-            (i + 1, j),
-            (i, j - 1),
-            (i, j + 1),
-        ]:
+        for new_i, new_j in [(i, j), (i - 1, j), (i + 1, j), (i, j - 1), (i, j + 1)]:
             q.append((time + 1, (new_i, new_j)))
     return -1
 
@@ -82,8 +79,14 @@ def main() -> None:
 
     file_path = sys.argv[1]
     grid = read_input(file_path)
-    part_1 = quickest_path(grid)
-    print(part_1)
+    has_blizzards = find_blizzards_till_repeat(grid)
+    m, n = len(grid), len(grid[0])
+    source = next((0, j) for j in range(n) if grid[0][j] == ".")
+    target = next((m - 1, j) for j in range(n) if grid[m - 1][j] == ".")
+    part_1 = quickest_path(grid, has_blizzards, source, target, 0)
+    t = quickest_path(grid, has_blizzards, target, source, part_1)
+    part_2 = quickest_path(grid, has_blizzards, source, target, t)
+    print(f"{part_1 = } {part_2 = }")
 
 
 if __name__ == "__main__":
