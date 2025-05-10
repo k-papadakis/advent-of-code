@@ -75,7 +75,7 @@ Unfortunately, the monkey only knows how to decide when to sell by looking at th
 
 So, if a buyer starts with a secret number of 123, that buyer's first ten secret numbers, prices, and the associated changes would be:
 
-     123: 3 
+     123: 3
 15887950: 0 (-3)
 16495136: 6 (6)
   527345: 5 (-1)

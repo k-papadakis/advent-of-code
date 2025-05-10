@@ -39,4 +39,3 @@ fn main() {
 
     println!("part_1 = {part_1}, part_2 = {part_2}");
 }
-

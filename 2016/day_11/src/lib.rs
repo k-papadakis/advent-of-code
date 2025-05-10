@@ -128,4 +128,3 @@ impl<const NPAIRS: usize> State<NPAIRS> {
         None
     }
 }
-
