@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::{env, fs};
+use std::{env, fs, iter};
 
 const DIRECTIONS: [(isize, isize); 8] = [
     (1, 0),
@@ -60,6 +60,7 @@ fn find_accessible(grid: &[Vec<bool>]) -> impl Iterator<Item = (usize, usize)> {
     positions.filter(|&pos| is_accessible(grid, pos))
 }
 
+#[allow(dead_code)]
 fn grid_to_str(grid: &[Vec<bool>]) -> String {
     let mut res = String::with_capacity((grid.len()) * (grid[0].len() + 1));
     for row in grid {
@@ -72,6 +73,24 @@ fn grid_to_str(grid: &[Vec<bool>]) -> String {
     res
 }
 
+fn iter_accessible_with_removal(grid: &[Vec<bool>]) -> impl Iterator<Item = Vec<(usize, usize)>> {
+    let mut grid = grid.to_vec();
+    iter::from_fn(move || {
+        let accessibles: Vec<_> = find_accessible(&grid).collect();
+
+        if accessibles.is_empty() {
+            return None;
+        }
+
+        for (i, j) in accessibles.iter().copied() {
+            grid[i][j] = false
+        }
+
+        Some(accessibles)
+    })
+}
+
+#[allow(dead_code)]
 fn accessible_grid_to_str(grid: &[Vec<bool>]) -> String {
     let n = grid[0].len();
     let mut grid_str = grid_to_str(grid).into_bytes();
@@ -87,10 +106,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(file_path)?;
     let grid = parse(contents);
 
-    println!("{}\n{}", grid_to_str(&grid), accessible_grid_to_str(&grid));
-
     let part_1 = find_accessible(&grid).count();
+    let part_2: usize = iter_accessible_with_removal(&grid).map(|v| v.len()).sum();
+
     println!("Part 1: {part_1}");
+    println!("Part 2: {part_2}");
 
     Ok(())
 }
