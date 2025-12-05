@@ -14,13 +14,13 @@ fn parse(contents: impl AsRef<str>) -> (Vec<(u64, u64)>, Vec<u64>) {
     (ranges.collect(), ids.collect())
 }
 
-fn unite_ranges(intervals: &[(u64, u64)]) -> Vec<(u64, u64)> {
-    let mut union: Vec<(u64, u64)> = vec![];
+fn unite_ranges(ranges: &[(u64, u64)]) -> Vec<(u64, u64)> {
+    let mut union = Vec::new();
 
-    let mut intervals = intervals.to_owned();
-    intervals.sort_unstable();
+    let mut sorted_ranges = ranges.to_owned();
+    sorted_ranges.sort_unstable();
 
-    for (a, b) in intervals.into_iter() {
+    for (a, b) in sorted_ranges.into_iter() {
         if let Some((_, prev_b)) = union.last_mut()
             && *prev_b + 1 >= a
         {
