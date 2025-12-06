@@ -7,27 +7,31 @@ enum Op {
     Mul,
 }
 
-fn parse(contents: impl AsRef<str>) -> (Vec<Vec<i32>>, Vec<Op>) {
-    // TODO: rewrite using itertools
-    let rows: Vec<_> = contents
-        .as_ref()
-        .lines()
-        .map(|line| line.split_whitespace())
+fn parse(contents: impl AsRef<str>) -> (Vec<Vec<i64>>, Vec<Op>) {
+    let lines: Vec<_> = contents.as_ref().lines().collect();
+
+    let (ops_line, nums_lines) = lines.split_last().unwrap();
+
+    let ops: Vec<Op> = ops_line
+        .split_whitespace()
+        .map(|s| match s {
+            "+" => Op::Add,
+            "*" => Op::Mul,
+            other => panic!("invalid op {other}"),
+        })
         .collect();
 
-    let (ops, nums) = rows.split_last().unwrap();
+    let mut nums_iters: Vec<_> = nums_lines.iter().map(|s| s.split_whitespace()).collect();
+    let nums = (0..ops.len())
+        .map(|_| {
+            nums_iters
+                .iter_mut()
+                .map(|it| it.next().unwrap().parse().unwrap())
+                .collect()
+        })
+        .collect();
 
-    let nums = nums
-        .iter()
-        .map(|row| row.clone().map(|s| s.parse().unwrap()).collect());
-
-    let ops = ops.clone().map(|s| match s {
-        "+" => Op::Add,
-        "*" => Op::Mul,
-        other => panic!("invalid op {other}"),
-    });
-
-    (nums.collect(), ops.collect())
+    (nums, ops)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -35,6 +39,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(file_path)?;
     let (nums, ops) = parse(contents);
 
-    println!("nums: {nums:?}\nops: {ops:?}");
+    let part_1: i64 = nums
+        .iter()
+        .zip(ops)
+        .map(|(xs, op)| {
+            xs.iter()
+                .copied()
+                .reduce(|x, y| match op {
+                    Op::Mul => x * y,
+                    Op::Add => x + y,
+                })
+                .unwrap()
+        })
+        .sum();
+
+    println!("Part 1: {part_1}");
+
     Ok(())
 }
