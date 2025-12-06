@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::str::FromStr;
 use std::{env, fs};
 
 #[derive(Clone, Copy, Debug)]
@@ -7,38 +8,63 @@ enum Op {
     Mul,
 }
 
-fn parse(contents: impl AsRef<str>) -> (Vec<Vec<u64>>, Vec<Vec<u64>>, Vec<Op>) {
+impl FromStr for Op {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "+" => Ok(Self::Add),
+            "*" => Ok(Self::Mul),
+            other => Err(format!("invalid op {other}")),
+        }
+    }
+}
+
+struct Problem {
+    operator: Op,
+    operands: Vec<u64>,
+}
+
+impl Problem {
+    fn solve(&self) -> u64 {
+        match self.operator {
+            Op::Add => self.operands.iter().sum(),
+            Op::Mul => self.operands.iter().product(),
+        }
+    }
+}
+
+fn parse1(contents: impl AsRef<str>) -> Vec<Problem> {
     let lines: Vec<_> = contents.as_ref().lines().collect();
 
     let (ops_line, nums_lines) = lines.split_last().unwrap();
 
-    let ops: Vec<Op> = ops_line
-        .split_whitespace()
-        .map(|s| match s {
-            "+" => Op::Add,
-            "*" => Op::Mul,
-            other => panic!("invalid op {other}"),
-        })
-        .collect();
+    let ops = ops_line.split_whitespace().map(|s| s.parse().unwrap());
 
-    // Create an iterator of words on each row and advance them in lockstep.
-    let mut nums1_iters: Vec<_> = nums_lines.iter().map(|s| s.split_whitespace()).collect();
-    let nums1 = (0..ops.len())
-        .map(|_| {
-            nums1_iters
-                .iter_mut()
-                .map(|it| it.next().unwrap().parse().unwrap())
-                .collect()
-        })
-        .collect();
+    let mut nums_iters: Vec<_> = nums_lines.iter().map(|s| s.split_whitespace()).collect();
+    let num_words = ops_line.split_whitespace().count();
+    let nums = (0..num_words).map(|_| {
+        nums_iters
+            .iter_mut()
+            .map(|it| it.next().unwrap().parse().unwrap())
+            .collect()
+    });
 
-    // Create an iterator of characters on each row and advance them in lockstep.
-    // Each advancement results into Some(number) if the advancement returned any digits, otherwise None
-    // Then we split on None like so:
-    // Some(1), Some(23), None, Some(456), None, Some(7), Some(8)
-    // -> [[1, 23], [456], [7, 8]]
+    nums.zip(ops)
+        .map(|(operands, operator)| Problem { operator, operands })
+        .collect()
+}
+
+fn parse2(contents: impl AsRef<str>) -> Vec<Problem> {
+    let lines: Vec<_> = contents.as_ref().lines().collect();
+
+    let (ops_line, nums_lines) = lines.split_last().unwrap();
+
+    let ops = ops_line.split_whitespace().map(|s| s.parse().unwrap());
+
     let mut digit_iters: Vec<_> = nums_lines.iter().map(|s| s.chars()).collect();
-    let nums2_opts: Vec<_> = (0..ops_line.len())
+    let num_chars = ops_line.chars().count();
+    let nums_opts: Vec<_> = (0..num_chars)
         .map(|_| {
             digit_iters
                 .iter_mut()
@@ -47,32 +73,23 @@ fn parse(contents: impl AsRef<str>) -> (Vec<Vec<u64>>, Vec<Vec<u64>>, Vec<Op>) {
                 .reduce(|x, y| 10 * x + y)
         })
         .collect();
-    let nums2 = nums2_opts
+    let nums = nums_opts
         .split(|x| x.is_none())
-        .map(|x| x.iter().flatten().copied().collect())
-        .collect();
+        .map(|x| x.iter().flatten().copied().collect());
 
-    (nums1, nums2, ops)
-}
-
-fn solve(xs: &[u64], op: Op) -> u64 {
-    match op {
-        Op::Add => xs.iter().sum(),
-        Op::Mul => xs.iter().product(),
-    }
-}
-
-fn solve_sum(nums: &[Vec<u64>], ops: &[Op]) -> u64 {
-    nums.iter().zip(ops).map(|(xs, &op)| solve(xs, op)).sum()
+    nums.zip(ops)
+        .map(|(operands, operator)| Problem { operator, operands })
+        .collect()
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let file_path = env::args().nth(1).ok_or("file path not provided")?;
     let contents = fs::read_to_string(file_path)?;
-    let (nums1, nums2, ops) = parse(contents);
+    let problems1 = parse1(&contents);
+    let problems2 = parse2(contents);
 
-    let part_1 = solve_sum(&nums1, &ops);
-    let part_2 = solve_sum(&nums2, &ops);
+    let part_1: u64 = problems1.iter().map(|problem| problem.solve()).sum();
+    let part_2: u64 = problems2.iter().map(|problem| problem.solve()).sum();
 
     println!("Part 1: {part_1}");
     println!("Part 2: {part_2}");
