@@ -41,6 +41,7 @@ fn parse1(contents: impl AsRef<str>) -> Vec<Problem> {
 
     let ops = ops_line.split_whitespace().map(|s| s.parse().unwrap());
 
+    // Create an iterator of words on each row and advance them in lockstep.
     let mut nums_iters: Vec<_> = nums_lines.iter().map(|s| s.split_whitespace()).collect();
     let num_words = ops_line.split_whitespace().count();
     let nums = (0..num_words).map(|_| {
@@ -62,6 +63,11 @@ fn parse2(contents: impl AsRef<str>) -> Vec<Problem> {
 
     let ops = ops_line.split_whitespace().map(|s| s.parse().unwrap());
 
+    // Create an iterator of characters on each row and advance them in lockstep.
+    // Each advancement results into Some(number) if the advancement returned any digits, otherwise None
+    // Then we split on None like so:
+    // Some(1), Some(23), None, Some(456), None, Some(7), Some(8)
+    // -> [1, 23], [456], [7, 8]
     let mut digit_iters: Vec<_> = nums_lines.iter().map(|s| s.chars()).collect();
     let num_chars = ops_line.chars().count();
     let nums_opts: Vec<_> = (0..num_chars)
