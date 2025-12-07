@@ -1,3 +1,4 @@
+use cached::proc_macro::cached;
 use std::{env, error::Error, fs};
 
 type Grid = Vec<Vec<bool>>;
@@ -29,7 +30,7 @@ fn parse(contents: impl AsRef<str>) -> Result<(Grid, Pos), String> {
     Ok((grid?, start.ok_or("start not found")?))
 }
 
-fn count_splits(grid: Grid, start: Pos) -> usize {
+fn count_splits(grid: &Grid, start: Pos) -> usize {
     let n = grid[0].len();
 
     let mut beams = vec![false; n];
@@ -55,13 +56,39 @@ fn count_splits(grid: Grid, start: Pos) -> usize {
     res
 }
 
+#[cached(key = "Pos", convert = r#"{ start }"#)]
+fn count_timelines(grid: &Grid, start: Pos) -> usize {
+    if start.0 == grid.len() - 1 {
+        return 1;
+    }
+
+    if grid[start.0][start.1] {
+        let left = if start.1 > 0 {
+            count_timelines(grid, (start.0 + 1, start.1 - 1))
+        } else {
+            0
+        };
+        let right = if start.1 + 1 < grid.len() {
+            count_timelines(grid, (start.0 + 1, start.1 + 1))
+        } else {
+            0
+        };
+        left + right
+    } else {
+        count_timelines(grid, (start.0 + 1, start.1))
+    }
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let file_path = env::args().nth(1).ok_or("file path not provided")?;
     let contents = fs::read_to_string(file_path)?;
     let (grid, start) = parse(contents)?;
 
-    let part_1 = count_splits(grid, start);
+    let part_1 = count_splits(&grid, start);
     println!("Part 1: {part_1}");
+
+    let part_2 = count_timelines(&grid, start);
+    println!("Part 2: {part_2}");
 
     Ok(())
 }
