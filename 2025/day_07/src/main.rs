@@ -29,63 +29,31 @@ fn parse(contents: impl AsRef<str>) -> Result<(Grid<bool>, Pos), String> {
     Ok((grid?, start.ok_or("start not found")?))
 }
 
-fn count_splits(grid: &Grid<bool>, start: Pos) -> usize {
+fn count_splits_and_paths(grid: &Grid<bool>, start: Pos) -> (usize, usize) {
     let n = grid[0].len();
 
-    let mut beams = vec![false; n];
-    beams[start.1] = true;
+    let mut nbeams = 0usize;
 
-    let mut res = 0;
+    let mut npaths = vec![0usize; n];
+    npaths[start.1] = 1;
 
     for row in grid[start.0..].iter() {
         for j in 0..n {
-            if row[j] && beams[j] {
+            if row[j] && npaths[j] > 0 {
                 if j > 0 {
-                    beams[j - 1] = true;
+                    npaths[j - 1] += npaths[j];
                 };
                 if j + 1 < n {
-                    beams[j + 1] = true;
+                    npaths[j + 1] += npaths[j];
                 }
-                beams[j] = false;
-                res += 1;
+                npaths[j] = 0;
+
+                nbeams += 1;
             }
         }
     }
 
-    res
-}
-
-fn count_timelines_memo(grid: &Grid<bool>, (i, j): Pos, cache: &mut Grid<Option<usize>>) -> usize {
-    if let Some(cache_hit) = cache[i][j] {
-        return cache_hit;
-    }
-
-    let (m, n) = (grid.len(), grid[0].len());
-
-    if i == m - 1 {
-        return 1;
-    }
-
-    let res = if grid[i][j] {
-        let mut acc = 0;
-        if j > 0 {
-            acc += count_timelines_memo(grid, (i + 1, j - 1), cache)
-        }
-        if j < n - 1 {
-            acc += count_timelines_memo(grid, (i + 1, j + 1), cache)
-        };
-        acc
-    } else {
-        count_timelines_memo(grid, (i + 1, j), cache)
-    };
-
-    cache[i][j] = Some(res);
-    res
-}
-
-fn count_timelines(grid: &Grid<bool>, start: Pos) -> usize {
-    let mut cache = vec![vec![None; grid[0].len()]; grid.len()];
-    count_timelines_memo(grid, start, &mut cache)
+    (nbeams, npaths.iter().sum())
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -93,10 +61,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(file_path)?;
     let (grid, start) = parse(contents)?;
 
-    let part_1 = count_splits(&grid, start);
+    let (part_1, part_2) = count_splits_and_paths(&grid, start);
     println!("Part 1: {part_1}");
-
-    let part_2 = count_timelines(&grid, start);
     println!("Part 2: {part_2}");
 
     Ok(())
