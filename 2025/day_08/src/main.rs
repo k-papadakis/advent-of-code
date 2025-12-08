@@ -1,5 +1,7 @@
+// TODO: improve code quality and efficiency
+
 use std::cmp::Reverse;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::HashMap;
 use std::error::Error;
 use std::{env, fs};
 
@@ -31,21 +33,17 @@ fn sqrdist(u: Point, v: Point) -> u64 {
         .sum()
 }
 
-fn get_edges(coords: &[Point], nedges: usize) -> Result<Vec<(usize, usize)>, String> {
+fn get_sorted_edges(coords: &[Point]) -> Vec<(usize, usize)> {
     let n = coords.len();
-    let mut heap = BinaryHeap::with_capacity(n * (n + 1) / 2 - n);
+    let mut edges = Vec::with_capacity(n * (n + 1) / 2 - n);
     for i in 0..n {
         for j in i + 1..n {
-            let d = sqrdist(coords[i], coords[j]);
-            heap.push((Reverse(d), (i, j)))
+            edges.push((i, j))
         }
     }
-    (0..nedges)
-        .map(|_| {
-            let (_, (u, v)) = heap.pop().ok_or("not enough coords for ndedges")?;
-            Ok((u, v))
-        })
-        .collect()
+    edges.sort_unstable_by_key(|&(i, j)| sqrdist(coords[i], coords[j]));
+
+    edges
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -53,11 +51,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(file_path)?;
     let coords = parse(contents)?;
 
-    const N: usize = 1000;
-    let edges = get_edges(&coords, N)?;
+    let edges = get_sorted_edges(&coords);
 
     let mut uf = UnionFind::<usize>::new(coords.len());
-    for (i, j) in edges {
+    for &(i, j) in &edges[..1_000] {
         uf.union(i, j);
     }
     let mut counts = HashMap::new();
@@ -68,6 +65,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     counts.sort_unstable_by_key(|&(_, count)| Reverse(count));
     let part_1: usize = counts.iter().take(3).map(|(_, count)| count).product();
     println!("Part 1: {part_1}");
+
+    //
+
+    let mut uf = UnionFind::<usize>::new(coords.len());
+    let mut last = None;
+    for (i, j) in edges {
+        if uf.union(i, j) {
+            last = Some((i, j));
+        }
+    }
+    let (i, j) = last.unwrap();
+    let part_2 = coords[i][0] * coords[j][0];
+    println!("Part 2: {part_2}");
 
     // let graph = get_graph(&coords, 1_000);
 
