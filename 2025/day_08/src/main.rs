@@ -1,11 +1,9 @@
 // TODO: improve code quality and efficiency
 
-use std::cmp::Reverse;
+use day_08::UnionFind;
 use std::collections::HashMap;
 use std::error::Error;
 use std::{env, fs};
-
-use petgraph::unionfind::UnionFind;
 
 type Point = [u64; 3];
 
@@ -46,40 +44,44 @@ fn get_sorted_edges(coords: &[Point]) -> Vec<(usize, usize)> {
     edges
 }
 
+fn circuit_sizes_desc(uf: &mut UnionFind) -> Vec<usize> {
+    let mut counts = HashMap::new();
+    for r in uf.labels() {
+        counts.entry(r).and_modify(|c| *c += 1).or_insert(1);
+    }
+    let mut counts: Vec<_> = counts.into_values().collect();
+    counts.sort();
+    counts.reverse();
+    counts
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let file_path = env::args().nth(1).ok_or("file path not provided")?;
     let contents = fs::read_to_string(file_path)?;
     let coords = parse(contents)?;
 
+    const N: usize = 1_000;
+
     let edges = get_sorted_edges(&coords);
 
-    let mut uf = UnionFind::<usize>::new(coords.len());
-    for &(i, j) in &edges[..1_000] {
+    // Apply the first N connections
+    let mut uf = UnionFind::new(coords.len());
+    for &(i, j) in &edges[..N] {
         uf.union(i, j);
     }
-    let mut counts = HashMap::new();
-    for r in uf.into_labeling() {
-        counts.entry(r).and_modify(|c| *c += 1).or_insert(1);
-    }
-    let mut counts: Vec<_> = counts.into_iter().collect();
-    counts.sort_unstable_by_key(|&(_, count)| Reverse(count));
-    let part_1: usize = counts.iter().take(3).map(|(_, count)| count).product();
+    let part_1: usize = circuit_sizes_desc(&mut uf)[..3].iter().product();
     println!("Part 1: {part_1}");
 
-    //
-
-    let mut uf = UnionFind::<usize>::new(coords.len());
+    // Apply the rest of the connections
     let mut last = None;
-    for (i, j) in edges {
+    for &(i, j) in &edges[N + 1..] {
         if uf.union(i, j) {
             last = Some((i, j));
         }
     }
-    let (i, j) = last.unwrap();
+    let (i, j) = last.expect("should always be found given that we have all edges");
     let part_2 = coords[i][0] * coords[j][0];
     println!("Part 2: {part_2}");
-
-    // let graph = get_graph(&coords, 1_000);
 
     Ok(())
 }
