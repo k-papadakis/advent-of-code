@@ -22,6 +22,10 @@ impl Rectangle {
         let b = 1 + self.max[1] - self.min[1];
         a * b
     }
+
+    fn encloses(&self, u: &Point) -> bool {
+        self.min[0] < u[0] && u[0] < self.max[0] && self.min[1] < u[1] && u[1] < self.max[1]
+    }
 }
 
 fn parse(contents: impl AsRef<str>) -> Result<Vec<Point>, String> {
@@ -58,6 +62,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let part_1 = rectangles.first().ok_or("empty contents")?.area();
     println!("Part 1: {part_1}");
+
+    let r = rectangles
+        .iter()
+        .find(|r| curve.iter().all(|v| !r.encloses(v)))
+        .ok_or("rectangle not found")?;
+
+    println!("{:?} {}", r, r.area());
 
     Ok(())
 }
